@@ -2,7 +2,7 @@
 // script.js — Challenge Ligue 1
 // ============================================================
 // Colle l'URL de ton deploiement Apps Script ici :
-const API_URL = 'https://script.google.com/macros/s/AKfycbyHB9gKIwcUsrlTNE6A4ql-TReXgtzyGN1XB1vrue9L-F9MZS_x5BNzGOSo5CU0RmCZNw/exec';
+const API_URL = 'COLLE_ICI_TON_URL_APPS_SCRIPT';
 const TOTAL_JOURNEES = 34;
 
 let journeeCourante = 1;
@@ -139,10 +139,18 @@ function construireLigneMatch(m) {
   const ligne = document.createElement('div');
   ligne.className = 'ligne-match';
 
-  const info = document.createElement('div');
-  info.className = 'info-match';
-  info.innerHTML = `<p class="equipe">${m.domicile}</p><p class="detail-match">vs ${m.exterieur} · ${m.date.slice(5)} ${m.heure}</p>`;
-  ligne.appendChild(info);
+  const domicile = document.createElement('div');
+  domicile.className = 'equipe-cote domicile';
+  domicile.textContent = m.domicile;
+  ligne.appendChild(domicile);
+
+  const centre = document.createElement('div');
+  centre.className = 'bloc-central';
+
+  const detail = document.createElement('p');
+  detail.className = 'detail-match';
+  detail.textContent = `${m.date.slice(5)} · ${m.heure}`;
+  centre.appendChild(detail);
 
   if (m.typePronostic === 'score_exact') {
     const inputs = document.createElement('div');
@@ -164,11 +172,14 @@ function construireLigneMatch(m) {
     const tiret = document.createElement('span'); tiret.textContent = '-';
     inputs.appendChild(tiret);
     inputs.appendChild(inE);
-    ligne.appendChild(inputs);
+    centre.appendChild(inputs);
   } else {
     const boutons = document.createElement('div');
     boutons.className = 'boutons-1n2';
+    const cotes = { '1': m.coteDomicile, 'N': m.coteNul, '2': m.coteExterieur };
     ['1', 'N', '2'].forEach(val => {
+      const colonne = document.createElement('div');
+      colonne.className = 'choix-1n2';
       const btn = document.createElement('button');
       btn.textContent = val;
       if (m.prono === val) btn.classList.add('choisi');
@@ -178,10 +189,21 @@ function construireLigneMatch(m) {
         btn.classList.add('choisi');
         envoyerProno(m.idMatch, val, '', '', statutIcone);
       });
-      boutons.appendChild(btn);
+      colonne.appendChild(btn);
+      const cote = document.createElement('span');
+      cote.className = 'cote';
+      cote.textContent = cotes[val] ? cotes[val] : '–';
+      colonne.appendChild(cote);
+      boutons.appendChild(colonne);
     });
-    ligne.appendChild(boutons);
+    centre.appendChild(boutons);
   }
+  ligne.appendChild(centre);
+
+  const exterieur = document.createElement('div');
+  exterieur.className = 'equipe-cote exterieur';
+  exterieur.textContent = m.exterieur;
+  ligne.appendChild(exterieur);
 
   const statutIcone = document.createElement('span');
   statutIcone.className = 'statut-match';
