@@ -2,7 +2,7 @@
 // script.js — Challenge Ligue 1
 // ============================================================
 // Colle l'URL de ton deploiement Apps Script ici :
-const API_URL = 'COLLE_ICI_TON_URL_APPS_SCRIPT';
+const API_URL = 'https://script.google.com/macros/s/AKfycbyHB9gKIwcUsrlTNE6A4ql-TReXgtzyGN1XB1vrue9L-F9MZS_x5BNzGOSo5CU0RmCZNw/exec';
 const TOTAL_JOURNEES = 34;
 
 let journeeCourante = 1;
