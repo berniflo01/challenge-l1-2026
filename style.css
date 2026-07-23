@@ -94,23 +94,27 @@ select, input[type=password] {
 #journee-numero { font-weight: 500; font-size: 15px; }
 .note { font-size: 11px; color: var(--ink-dim); }
 
-.ligne-match { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 0.5px solid var(--border); gap: 10px; }
+.ligne-match { display: flex; align-items: center; padding: 12px 16px; border-bottom: 0.5px solid var(--border); gap: 8px; }
 .ligne-match:last-child { border-bottom: none; }
-.info-match { flex: 1; min-width: 0; }
-.info-match p { margin: 0; }
-.equipe { font-size: 14px; font-weight: 500; }
-.detail-match { font-size: 12px; color: var(--ink-dim); }
+.detail-match { font-size: 11px; color: var(--ink-dim); text-align: center; margin: 0 0 6px; }
 
-.boutons-1n2 { display: flex; gap: 6px; }
-.boutons-1n2 button {
-  width: 42px; height: 32px;
+.equipe-cote { flex: 1; min-width: 0; font-size: 13px; font-weight: 500; }
+.equipe-cote.domicile { text-align: right; }
+.equipe-cote.exterieur { text-align: left; }
+
+.bloc-central { display: flex; flex-direction: column; align-items: center; width: 130px; flex-shrink: 0; }
+.boutons-1n2 { display: flex; gap: 4px; }
+.choix-1n2 { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 40px; }
+.choix-1n2 button {
+  width: 40px; height: 30px;
   border: 0.5px solid var(--border);
   border-radius: 6px;
   background: var(--surface);
   font-size: 13px;
   cursor: pointer;
 }
-.boutons-1n2 button.choisi { background: var(--green-bg); border-color: var(--green); color: var(--green); font-weight: 500; }
+.choix-1n2 button.choisi { background: var(--green-bg); border-color: var(--green); color: var(--green); font-weight: 500; }
+.choix-1n2 .cote { font-size: 10px; color: var(--ink-dim); font-family: 'JetBrains Mono', monospace; }
 
 .inputs-score { display: flex; align-items: center; gap: 6px; }
 .inputs-score input {
@@ -121,7 +125,7 @@ select, input[type=password] {
   font-size: 14px;
 }
 
-.statut-match { font-size: 16px; width: 20px; text-align: center; flex-shrink: 0; }
+.statut-match { font-size: 15px; width: 18px; text-align: center; flex-shrink: 0; }
 .statut-match.saved { color: var(--green); }
 .statut-match.locked { color: var(--ink-dim); }
 .statut-match.error { color: var(--red); }
