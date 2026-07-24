@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Challenge Ligue 1</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="vue-connexion" class="vue">
+  <div class="carte-login">
+    <h1>Challenge Ligue 1</h1>
+    <p class="sous-titre">Saison 2026 – 2027</p>
+
+    <label>Ton nom</label>
+    <select id="select-joueur"><option value="">Chargement...</option></select>
+
+    <label>Mot de passe</label>
+    <input type="password" id="input-mdp" placeholder="Ton mot de passe">
+    <p class="aide">Demande ton mot de passe à Berni si tu ne l'as pas.</p>
+
+    <button id="btn-connexion" class="btn-principal">Se connecter</button>
+    <p id="erreur-connexion" class="erreur"></p>
+  </div>
+</div>
+
+<div id="vue-app" class="vue" style="display:none">
+  <nav class="topbar">
+    <span id="nom-joueur"></span>
+    <div class="onglets">
+      <button class="onglet actif" data-vue="pronos">Pronos</button>
+      <button class="onglet" data-vue="classement">Classement</button>
+    </div>
+    <button id="btn-deconnexion" class="lien">Déconnexion</button>
+  </nav>
+
+  <section id="ecran-pronos" class="ecran">
+    <div class="carte">
+      <div class="entete-journee">
+        <button id="journee-prec" aria-label="Journée précédente">‹</button>
+        <div class="titre-journee">
+          <p id="journee-numero">Journée 1</p>
+          <p class="note">Verrouillage à chaque coup d'envoi</p>
+        </div>
+        <button id="journee-suiv" aria-label="Journée suivante">›</button>
+      </div>
+
+      <div id="liste-matchs"></div>
+
+      <div class="pied-journee">
+        <span id="compteur-pronos">0 / 9 pronostiqués</span>
+        <button id="btn-aleatoire" class="lien">Aléatoire cette journée</button>
+      </div>
+    </div>
+    <button id="btn-aleatoire-saison" class="lien lien-discret">Tout randomiser pour la saison</button>
+  </section>
+
+  <section id="ecran-classement" class="ecran" style="display:none">
+    <div class="carte">
+      <table class="table-classement">
+        <thead><tr><th></th><th>Rang</th><th>Joueur</th><th>Points</th></tr></thead>
+        <tbody id="corps-classement"></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
