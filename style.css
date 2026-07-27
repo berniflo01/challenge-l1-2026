@@ -85,6 +85,9 @@ select, input[type=password] {
 .lien-discret { color: var(--ink-dim); display: block; margin: 14px auto 0; text-align: center; }
 
 .ecran { max-width: 480px; margin: 0 auto; padding: 20px 16px 40px; }
+#bloc-admin-cible { margin-bottom: 12px; }
+#bloc-admin-cible label { margin: 0 0 4px; }
+#select-cible-admin { width: 100%; height: 38px; border-radius: 8px; border: 0.5px solid var(--border); padding: 0 10px; font-size: 13px; background: var(--surface); }
 .carte { background: var(--surface); border: 0.5px solid var(--border); border-radius: 16px; overflow: hidden; }
 
 .entete-journee { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 0.5px solid var(--border); }
@@ -124,6 +127,7 @@ select, input[type=password] {
   text-align: center;
   font-size: 14px;
 }
+.cotes-score-exact { font-size: 10px; color: var(--ink-dim); font-family: 'JetBrains Mono', monospace; margin: 4px 0 0; }
 
 .statut-match { font-size: 15px; width: 18px; text-align: center; flex-shrink: 0; }
 .statut-match.saved { color: var(--green); }
