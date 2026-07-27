@@ -7,6 +7,8 @@ const TOTAL_JOURNEES = 34;
 
 let journeeCourante = 1;
 let joueurCourant = null;
+let idJoueurAffiche = null; // si un admin saisit pour un autre joueur
+let listeJoueursGlobale = [];
 
 // --- Stockage du token ---
 const getToken = () => localStorage.getItem('token_challenge_l1');
@@ -17,7 +19,7 @@ const clearToken = () => localStorage.removeItem('token_challenge_l1');
 async function apiGet(action, params = {}) {
   const url = new URL(API_URL);
   url.searchParams.set('action', action);
-  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+  Object.entries(params).forEach(([k, v]) => { if (v !== null && v !== undefined) url.searchParams.set(k, v); });
   const res = await fetch(url);
   return res.json();
 }
@@ -61,6 +63,7 @@ async function chargerListeJoueurs() {
   const select = document.getElementById('select-joueur');
   select.innerHTML = '<option value="">Choisis ton nom</option>';
   if (reponse.success) {
+    listeJoueursGlobale = reponse.joueurs;
     reponse.joueurs.forEach(j => {
       const opt = document.createElement('option');
       opt.value = j.idJoueur;
@@ -98,6 +101,25 @@ function afficherApp(joueur) {
   document.getElementById('vue-connexion').style.display = 'none';
   document.getElementById('vue-app').style.display = 'block';
   document.getElementById('nom-joueur').textContent = `${joueur.prenom} ${joueur.nom}`;
+
+  if (joueur.estAdmin) {
+    const bloc = document.getElementById('bloc-admin-cible');
+    bloc.style.display = 'block';
+    const select = document.getElementById('select-cible-admin');
+    select.innerHTML = '<option value="">Moi-même</option>';
+    listeJoueursGlobale.forEach(j => {
+      if (j.idJoueur === joueur.idJoueur) return;
+      const opt = document.createElement('option');
+      opt.value = j.idJoueur;
+      opt.textContent = j.nomAffiche;
+      select.appendChild(opt);
+    });
+    select.addEventListener('change', () => {
+      idJoueurAffiche = select.value ? Number(select.value) : null;
+      chargerJournee(journeeCourante);
+    });
+  }
+
   chargerJournee(journeeCourante);
 }
 
@@ -121,7 +143,7 @@ async function chargerJournee(n) {
   document.getElementById('journee-prec').disabled = n <= 1;
   document.getElementById('journee-suiv').disabled = n >= TOTAL_JOURNEES;
 
-  const reponse = await apiGet('pronosJournee', { token: getToken(), journee: n });
+  const reponse = await apiGet('pronosJournee', { token: getToken(), journee: n, idJoueurCible: idJoueurAffiche });
   const conteneur = document.getElementById('liste-matchs');
   conteneur.innerHTML = '';
   if (!reponse.success) return;
@@ -173,6 +195,11 @@ function construireLigneMatch(m) {
     inputs.appendChild(tiret);
     inputs.appendChild(inE);
     centre.appendChild(inputs);
+
+    const cotesTexte = document.createElement('p');
+    cotesTexte.className = 'cotes-score-exact';
+    cotesTexte.textContent = `1: ${m.coteDomicile || '–'}  N: ${m.coteNul || '–'}  2: ${m.coteExterieur || '–'}`;
+    centre.appendChild(cotesTexte);
   } else {
     const boutons = document.createElement('div');
     boutons.className = 'boutons-1n2';
@@ -219,7 +246,7 @@ async function envoyerProno(idMatch, prono, scoreDomicilePredit, scoreExterieurP
   iconeEl.textContent = '…';
   iconeEl.className = 'statut-match saving';
   const reponse = await apiPost('sauvegarderProno', {
-    idMatch, prono, scoreDomicilePredit, scoreExterieurPredit,
+    idMatch, prono, scoreDomicilePredit, scoreExterieurPredit, idJoueurCible: idJoueurAffiche,
   });
   if (reponse.success) {
     iconeEl.textContent = '✓';
