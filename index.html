@@ -1,166 +1,76 @@
-// ============================================================
-// Auth.gs — liste des joueurs + connexion (mot de passe cree au 1er login)
-// ============================================================
-// Le hash + sel de chaque joueur vivent dans les Proprietes du script
-// (jamais dans la Sheet), cles "hash_<idJoueur>" et "sel_<idJoueur>".
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Challenge Ligue 1</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
 
-// Retourne la liste des joueurs pour le menu deroulant de connexion.
-// Ne renvoie jamais de hash/sel. Ajoute un distinctif si nom+prenom en double.
-function listeJoueurs() {
-  const sheet = getSheet_(SHEETS.JOUEURS);
-  const derniere = sheet.getLastRow();
-  if (derniere < 2) return [];
-  const donnees = sheet.getRange(2, 1, derniere - 1, 7).getValues();
+<div id="vue-connexion" class="vue">
+  <div class="carte-login">
+    <h1>Challenge Ligue 1</h1>
+    <p class="sous-titre">Saison 2026 – 2027</p>
 
-  const vus = {};
-  donnees.forEach(r => {
-    const cle = (r[COL_JOUEURS.NOM - 1] + ' ' + r[COL_JOUEURS.PRENOM - 1]).toLowerCase();
-    vus[cle] = (vus[cle] || 0) + 1;
-  });
+    <label>Ton nom</label>
+    <select id="select-joueur"><option value="">Chargement...</option></select>
 
-  return donnees
-    .filter(r => r[COL_JOUEURS.NOM - 1]) // ignore les lignes vides
-    .map(r => {
-      const nom = r[COL_JOUEURS.NOM - 1];
-      const prenom = r[COL_JOUEURS.PRENOM - 1];
-      const cle = (nom + ' ' + prenom).toLowerCase();
-      const affichage = vus[cle] > 1 ? `${prenom} ${nom} (#${r[COL_JOUEURS.ID - 1]})` : `${prenom} ${nom}`;
-      return { idJoueur: r[COL_JOUEURS.ID - 1], nomAffiche: affichage };
-    });
-}
+    <label>Mot de passe</label>
+    <input type="password" id="input-mdp" placeholder="Ton mot de passe">
+    <p class="aide">Demande ton mot de passe à Berni si tu ne l'as pas.</p>
 
-// Connexion. Le mot de passe doit avoir ete defini au prealable par
-// l'admin via definirMotsDePasse(). Retourne un token si ok.
-function connexion_(idJoueur, motDePasse) {
-  const sheet = getSheet_(SHEETS.JOUEURS);
-  const ligne = trouverLigne_(sheet, COL_JOUEURS.ID, idJoueur);
-  if (ligne === -1) return { success: false, reason: 'joueur_introuvable' };
+    <button id="btn-connexion" class="btn-principal">Se connecter</button>
+    <p id="erreur-connexion" class="erreur"></p>
+  </div>
+</div>
 
-  const props = PropertiesService.getScriptProperties();
-  const cleHash = 'hash_' + idJoueur;
-  const cleSel = 'sel_' + idJoueur;
-  const hashActuel = props.getProperty(cleHash);
+<div id="vue-app" class="vue" style="display:none">
+  <nav class="topbar">
+    <span id="nom-joueur"></span>
+    <div class="onglets">
+      <button class="onglet actif" data-vue="pronos">Pronos</button>
+      <button class="onglet" data-vue="classement">Classement</button>
+    </div>
+    <button id="btn-deconnexion" class="lien">Déconnexion</button>
+  </nav>
 
-  if (!hashActuel) {
-    return { success: false, reason: 'mot_de_passe_non_defini' };
-  }
+  <section id="ecran-pronos" class="ecran">
+    <div id="bloc-admin-cible" style="display:none">
+      <label>Saisir pour</label>
+      <select id="select-cible-admin"><option value="">Moi-même</option></select>
+    </div>
+    <div class="carte">
+      <div class="entete-journee">
+        <button id="journee-prec" aria-label="Journée précédente">‹</button>
+        <div class="titre-journee">
+          <p id="journee-numero">Journée 1</p>
+          <p class="note">Verrouillage à chaque coup d'envoi</p>
+        </div>
+        <button id="journee-suiv" aria-label="Journée suivante">›</button>
+      </div>
 
-  const sel = props.getProperty(cleSel);
-  const hashSaisi = hashMotDePasse_(motDePasse, sel);
-  if (hashSaisi !== hashActuel) {
-    return { success: false, reason: 'mot_de_passe_incorrect' };
-  }
-  return { success: true, token: creerToken_(idJoueur) };
-}
+      <div id="liste-matchs"></div>
 
-// A REMPLIR TOI-MEME : une ligne par joueur, format "Prenom Nom | motdepasse"
-// (meme ordre que la liste deroulante du site). Lance cette fonction une
-// fois depuis l'editeur (menu deroulant en haut -> definirMotsDePasse ->
-// Executer). Tu peux la relancer plus tard pour ajouter des joueurs ou
-// changer un mot de passe. Les mots de passe sont hashes avant d'etre
-// stockes, jamais gardes en clair nulle part.
-function definirMotsDePasse() {
-  const texte = `
-Bernigaud Florian | 
-Bernigaud Corentin | 
-Pom Bayou | 
-Kha Michael | 
-Reus Paul | 
-Belaizoud Quentin | 
-Fresnel Antony | 
-Borneat Simon | 
-Gentet Julien | 
-Xiong Naly | 
-Ba Stepen | 
-Mormile Jeremy | 
-Rude Loic | 
-Descotte Quentin | 
-Curtet Mickael | 
-Revel Max | 
-Taurines Ugo | 
-Xiong Tou vang | 
-Dubois Vainzou | 
-Abbd Mick | 
-Laurent Laurent | 
-Valhero Loic | 
-Goutardo Antoine | 
-Michel Arno | 
-Druguet Benoit | 
-Cass Franckey | 
-Vacher Frederic | 
-Guy Maxime | 
-Charvet Mathias | 
-Grandy Julien | 
-Boyer Florent | 
-`;
+      <div class="pied-journee">
+        <span id="compteur-pronos">0 / 9 pronostiqués</span>
+        <button id="btn-aleatoire" class="lien">Aléatoire cette journée</button>
+      </div>
+    </div>
+    <button id="btn-aleatoire-saison" class="lien lien-discret">Tout randomiser pour la saison</button>
+  </section>
 
-  const motsDePasse = texte.split('\n')
-    .map(l => l.trim())
-    .filter(l => l.length > 0)
-    .map(l => {
-      const [nomComplet, motDePasse] = l.split('|').map(p => p.trim());
-      return { nomComplet, motDePasse };
-    });
+  <section id="ecran-classement" class="ecran" style="display:none">
+    <div class="carte">
+      <table class="table-classement">
+        <thead><tr><th></th><th>Rang</th><th>Joueur</th><th>Points</th></tr></thead>
+        <tbody id="corps-classement"></tbody>
+      </table>
+    </div>
+  </section>
+</div>
 
-  const sheet = getSheet_(SHEETS.JOUEURS);
-  const derniere = sheet.getLastRow();
-  const donnees = derniere >= 2 ? sheet.getRange(2, 1, derniere - 1, 7).getValues() : [];
-  const props = PropertiesService.getScriptProperties();
-
-  let nbOk = 0;
-  const introuvables = [];
-  const vides = [];
-
-  motsDePasse.forEach(j => {
-    if (!j.motDePasse) { vides.push(j.nomComplet); return; }
-    const cible = j.nomComplet.trim().toLowerCase();
-    const ligne = donnees.find(r =>
-      `${r[COL_JOUEURS.PRENOM - 1]} ${r[COL_JOUEURS.NOM - 1]}`.trim().toLowerCase() === cible
-    );
-    if (!ligne) { introuvables.push(j.nomComplet); return; }
-
-    const id = ligne[COL_JOUEURS.ID - 1];
-    const sel = genererSel_();
-    const hash = hashMotDePasse_(j.motDePasse, sel);
-    props.setProperty('sel_' + id, sel);
-    props.setProperty('hash_' + id, hash);
-    nbOk++;
-  });
-
-  return { success: true, nbOk, introuvables, vides };
-}
-
-// Retourne les infos du joueur courant a partir d'un token (ou null si invalide)
-function joueurDepuisToken_(token) {
-  const verif = verifierToken_(token);
-  if (!verif) return null;
-  const sheet = getSheet_(SHEETS.JOUEURS);
-  const ligne = trouverLigne_(sheet, COL_JOUEURS.ID, verif.idJoueur);
-  if (ligne === -1) return null;
-  const row = sheet.getRange(ligne, 1, 1, 7).getValues()[0];
-  return {
-    idJoueur: row[COL_JOUEURS.ID - 1],
-    nom: row[COL_JOUEURS.NOM - 1],
-    prenom: row[COL_JOUEURS.PRENOM - 1],
-    estAdmin: row[COL_JOUEURS.ADMIN - 1] === true || row[COL_JOUEURS.ADMIN - 1] === 'VRAI',
-  };
-}
-
-// A lancer une seule fois (a la main, depuis l'editeur) si tu dois
-// reinitialiser le mot de passe d'un joueur qui a perdu le sien.
-function reinitialiserMotDePasse(nomComplet) {
-  const sheet = getSheet_(SHEETS.JOUEURS);
-  const derniere = sheet.getLastRow();
-  const donnees = derniere >= 2 ? sheet.getRange(2, 1, derniere - 1, 7).getValues() : [];
-  const cible = nomComplet.trim().toLowerCase();
-  const ligne = donnees.find(r =>
-    `${r[COL_JOUEURS.PRENOM - 1]} ${r[COL_JOUEURS.NOM - 1]}`.trim().toLowerCase() === cible
-  );
-  if (!ligne) return { success: false, reason: 'joueur_introuvable' };
-
-  const id = ligne[COL_JOUEURS.ID - 1];
-  const props = PropertiesService.getScriptProperties();
-  props.deleteProperty('hash_' + id);
-  props.deleteProperty('sel_' + id);
-  return { success: true };
-}
+<script src="script.js"></script>
+</body>
+</html>
