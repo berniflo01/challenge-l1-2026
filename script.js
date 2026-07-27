@@ -157,30 +157,55 @@ function majCompteur(matchs) {
   document.getElementById('compteur-pronos').textContent = `${nb} / ${matchs.length} pronostiqués`;
 }
 
+function formaterDateHeure_(dateStr, heureStr) {
+  const parts = String(dateStr).split('-');
+  if (parts.length === 3) return `${parts[2]}/${parts[1]} · ${heureStr}`;
+  return `${dateStr} · ${heureStr}`;
+}
+
 function construireLigneMatch(m) {
   const ligne = document.createElement('div');
   ligne.className = 'ligne-match';
 
-  const domicile = document.createElement('div');
-  domicile.className = 'equipe-cote domicile';
-  domicile.textContent = m.domicile;
-  ligne.appendChild(domicile);
+  const entete = document.createElement('div');
+  entete.className = 'entete-match';
+  const spanDom = document.createElement('span');
+  spanDom.className = 'equipe-nom';
+  spanDom.textContent = m.domicile;
+  const spanVs = document.createElement('span');
+  spanVs.className = 'vs';
+  spanVs.textContent = 'vs';
+  const spanExt = document.createElement('span');
+  spanExt.className = 'equipe-nom';
+  spanExt.textContent = m.exterieur;
+  entete.appendChild(spanDom);
+  entete.appendChild(spanVs);
+  entete.appendChild(spanExt);
 
-  const centre = document.createElement('div');
-  centre.className = 'bloc-central';
+  const statutIcone = document.createElement('span');
+  statutIcone.className = 'statut-match';
+  statutIcone.textContent = m.verrouille ? '🔒' : (m.prono ? '✓' : '');
+  if (m.prono) statutIcone.classList.add('saved');
+  if (m.verrouille) statutIcone.classList.add('locked');
+  entete.appendChild(statutIcone);
+  ligne.appendChild(entete);
 
   const detail = document.createElement('p');
   detail.className = 'detail-match';
-  detail.textContent = `${m.date.slice(5)} · ${m.heure}`;
-  centre.appendChild(detail);
+  const prefixe = m.typePronostic === 'score_exact' ? 'SCORE EXACT · ' : '';
+  detail.textContent = prefixe + formaterDateHeure_(m.date, m.heure);
+  ligne.appendChild(detail);
 
   if (m.typePronostic === 'score_exact') {
+    const bloc = document.createElement('div');
+    bloc.className = 'bloc-score-exact';
+
     const inputs = document.createElement('div');
     inputs.className = 'inputs-score';
     const inD = document.createElement('input');
-    inD.type = 'number'; inD.min = '0'; inD.max = '20'; inD.value = m.scoreDomicilePredit ?? '';
+    inD.type = 'number'; inD.className = 'no-spin'; inD.min = '0'; inD.max = '20'; inD.value = m.scoreDomicilePredit ?? '';
     const inE = document.createElement('input');
-    inE.type = 'number'; inE.min = '0'; inE.max = '20'; inE.value = m.scoreExterieurPredit ?? '';
+    inE.type = 'number'; inE.className = 'no-spin'; inE.min = '0'; inE.max = '20'; inE.value = m.scoreExterieurPredit ?? '';
     inD.disabled = inE.disabled = m.verrouille;
     const declencher = () => {
       if (inD.value === '' || inE.value === '') return;
@@ -191,15 +216,21 @@ function construireLigneMatch(m) {
     inD.addEventListener('change', declencher);
     inE.addEventListener('change', declencher);
     inputs.appendChild(inD);
-    const tiret = document.createElement('span'); tiret.textContent = '-';
+    const tiret = document.createElement('span'); tiret.className = 'tiret-score'; tiret.textContent = '-';
     inputs.appendChild(tiret);
     inputs.appendChild(inE);
-    centre.appendChild(inputs);
+    bloc.appendChild(inputs);
 
-    const cotesTexte = document.createElement('p');
-    cotesTexte.className = 'cotes-score-exact';
-    cotesTexte.textContent = `1: ${m.coteDomicile || '–'}  N: ${m.coteNul || '–'}  2: ${m.coteExterieur || '–'}`;
-    centre.appendChild(cotesTexte);
+    const cotesLigne = document.createElement('div');
+    cotesLigne.className = 'cotes-score-exact';
+    [m.coteDomicile, m.coteNul, m.coteExterieur].forEach(c => {
+      const s = document.createElement('span');
+      s.textContent = c || '–';
+      cotesLigne.appendChild(s);
+    });
+    bloc.appendChild(cotesLigne);
+
+    ligne.appendChild(bloc);
   } else {
     const boutons = document.createElement('div');
     boutons.className = 'boutons-1n2';
@@ -223,21 +254,8 @@ function construireLigneMatch(m) {
       colonne.appendChild(cote);
       boutons.appendChild(colonne);
     });
-    centre.appendChild(boutons);
+    ligne.appendChild(boutons);
   }
-  ligne.appendChild(centre);
-
-  const exterieur = document.createElement('div');
-  exterieur.className = 'equipe-cote exterieur';
-  exterieur.textContent = m.exterieur;
-  ligne.appendChild(exterieur);
-
-  const statutIcone = document.createElement('span');
-  statutIcone.className = 'statut-match';
-  statutIcone.textContent = m.verrouille ? '🔒' : (m.prono ? '✓' : '');
-  if (m.prono) statutIcone.classList.add('saved');
-  if (m.verrouille) statutIcone.classList.add('locked');
-  ligne.appendChild(statutIcone);
 
   return ligne;
 }
