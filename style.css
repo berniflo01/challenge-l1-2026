@@ -167,3 +167,26 @@ select, input[type=password] {
 .delta-hausse { color: var(--green); }
 .delta-baisse { color: var(--red); }
 .delta-stable { color: var(--ink-dim); }
+
+.sous-onglets { display: flex; gap: 6px; margin-bottom: 12px; }
+.sous-onglet {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink-dim);
+  padding: 8px 14px;
+  border-radius: 4px;
+  font-family: var(--font-display);
+  font-size: 13px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.sous-onglet.actif { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+
+.carte-reglement { padding: 20px; }
+.carte-reglement h2 { font-family: var(--font-display); font-size: 17px; letter-spacing: 0.02em; text-transform: uppercase; color: var(--accent); margin: 20px 0 8px; }
+.carte-reglement h2:first-child { margin-top: 0; }
+.carte-reglement p { font-size: 14px; color: var(--ink); line-height: 1.6; margin: 0 0 4px; }
+.table-reglement { width: 100%; border-collapse: collapse; margin-top: 8px; font-family: var(--font-mono); font-size: 13px; }
+.table-reglement td { padding: 8px 0; border-bottom: 1px solid var(--border); }
+.table-reglement td:last-child { text-align: right; color: var(--accent); font-weight: 700; }
