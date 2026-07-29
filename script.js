@@ -1,196 +1,397 @@
-:root {
-  --ink: #F2EFE9;
-  --ink-dim: #8A9690;
-  --ink-locked: #5A6560;
-  --bg: #0F1613;
-  --surface: #16201B;
-  --surface-2: #1D2621;
-  --border: #2A3A32;
-  --accent: #E8A33D;
-  --accent-ink: #0F1613;
-  --green: #5FAD7A;
-  --green-bg: rgba(95, 173, 122, 0.18);
-  --red: #E2665F;
-  --red-bg: rgba(226, 102, 95, 0.18);
-  --font-display: 'Bebas Neue', sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
+// ============================================================
+// script.js — Challenge Ligue 1
+// ============================================================
+// Colle l'URL de ton deploiement Apps Script ici :
+const API_URL = 'https://script.google.com/macros/s/AKfycbyHB9gKIwcUsrlTNE6A4ql-TReXgtzyGN1XB1vrue9L-F9MZS_x5BNzGOSo5CU0RmCZNw/exec';
+const TOTAL_JOURNEES = 34;
+
+let journeeCourante = 1;
+let joueurCourant = null;
+let idJoueurAffiche = null; // si un admin saisit pour un autre joueur
+let listeJoueursGlobale = [];
+let classementActif = 'general';
+
+// --- Stockage du token ---
+const getToken = () => localStorage.getItem('token_challenge_l1');
+const setToken = t => localStorage.setItem('token_challenge_l1', t);
+const clearToken = () => localStorage.removeItem('token_challenge_l1');
+
+// --- Appels API ---
+async function apiGet(action, params = {}) {
+  const url = new URL(API_URL);
+  url.searchParams.set('action', action);
+  Object.entries(params).forEach(([k, v]) => { if (v !== null && v !== undefined) url.searchParams.set(k, v); });
+  const res = await fetch(url);
+  return res.json();
 }
-* { box-sizing: border-box; }
-body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--ink);
-  font-family: 'Inter', system-ui, sans-serif;
-  font-size: 15px;
+
+async function apiPost(action, body = {}) {
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action, token: getToken(), ...body }),
+  });
+  return res.json();
 }
-.vue { min-height: 100vh; }
 
-/* --- Connexion --- */
-#vue-connexion { display: flex; align-items: center; justify-content: center; padding: 24px; }
-.carte-login {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 28px 24px;
-  width: 100%;
-  max-width: 360px;
+// --- Demarrage ---
+document.addEventListener('DOMContentLoaded', init);
+
+async function init() {
+  chargerListeJoueurs();
+
+  document.getElementById('btn-connexion').addEventListener('click', connexion);
+  document.querySelectorAll('.onglet').forEach(b => b.addEventListener('click', () => changerOnglet(b.dataset.vue)));
+  document.getElementById('btn-deconnexion').addEventListener('click', () => { clearToken(); location.reload(); });
+  document.getElementById('journee-prec').addEventListener('click', () => allerJournee(journeeCourante - 1));
+  document.getElementById('journee-suiv').addEventListener('click', () => allerJournee(journeeCourante + 1));
+  document.getElementById('btn-aleatoire').addEventListener('click', aleatoireJournee);
+  document.getElementById('btn-aleatoire-saison').addEventListener('click', aleatoireSaison);
+  document.querySelectorAll('.sous-onglet').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('.sous-onglet').forEach(x => x.classList.remove('actif'));
+    b.classList.add('actif');
+    classementActif = b.dataset.classement;
+    chargerClassement();
+  }));
+  document.getElementById('btn-sauvegarder-final').addEventListener('click', sauvegarderPronoFinal);
+
+  const token = getToken();
+  if (token) {
+    const reponse = await apiGet('moi', { token });
+    if (reponse.success) {
+      afficherApp(reponse.joueur);
+      return;
+    }
+    clearToken();
+  }
+  document.getElementById('vue-connexion').style.display = 'flex';
 }
-.carte-login h1 { font-family: var(--font-display); font-size: 30px; letter-spacing: 0.02em; margin: 0 0 2px; text-transform: uppercase; }
-.sous-titre { color: var(--ink-dim); font-size: 13px; margin: 0 0 24px; font-family: var(--font-mono); }
-label { display: block; font-size: 12px; color: var(--ink-dim); margin: 14px 0 6px; text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--font-mono); }
-select, input[type=password] {
-  width: 100%;
-  height: 40px;
-  border-radius: 4px;
-  border: 1px solid var(--border);
-  padding: 0 12px;
-  font-size: 14px;
-  background: var(--surface-2);
-  color: var(--ink);
-  font-family: 'Inter', sans-serif;
+
+async function chargerListeJoueurs() {
+  const reponse = await apiGet('listeJoueurs');
+  const select = document.getElementById('select-joueur');
+  select.innerHTML = '<option value="">Choisis ton nom</option>';
+  if (reponse.success) {
+    listeJoueursGlobale = reponse.joueurs;
+    reponse.joueurs.forEach(j => {
+      const opt = document.createElement('option');
+      opt.value = j.idJoueur;
+      opt.textContent = j.nomAffiche;
+      select.appendChild(opt);
+    });
+  }
 }
-.aide { font-size: 12px; color: var(--ink-dim); margin: 8px 0 0; line-height: 1.5; }
-.btn-principal {
-  width: 100%;
-  height: 42px;
-  border-radius: 4px;
-  border: none;
-  background: var(--accent);
-  color: var(--accent-ink);
-  font-family: var(--font-display);
-  font-size: 16px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  margin-top: 20px;
-  cursor: pointer;
+
+async function connexion() {
+  const idJoueur = document.getElementById('select-joueur').value;
+  const motDePasse = document.getElementById('input-mdp').value;
+  const erreur = document.getElementById('erreur-connexion');
+  erreur.textContent = '';
+
+  if (!idJoueur || !motDePasse) {
+    erreur.textContent = 'Choisis ton nom et entre un mot de passe.';
+    return;
+  }
+
+  const reponse = await apiPost('connexion', { idJoueur: Number(idJoueur), motDePasse });
+  if (!reponse.success) {
+    if (reponse.reason === 'mot_de_passe_incorrect') erreur.textContent = 'Mot de passe incorrect.';
+    else if (reponse.reason === 'mot_de_passe_non_defini') erreur.textContent = "Ton mot de passe n'a pas encore été créé, demande à Berni.";
+    else erreur.textContent = 'Une erreur est survenue, reessaie.';
+    return;
+  }
+  setToken(reponse.token);
+  const infos = await apiGet('moi', { token: reponse.token });
+  afficherApp(infos.joueur);
 }
-.btn-principal:active { opacity: 0.85; }
-.erreur { color: var(--red); font-size: 13px; margin-top: 10px; min-height: 1em; }
 
-/* --- App shell --- */
-.topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 20px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
+function afficherApp(joueur) {
+  joueurCourant = joueur;
+  document.getElementById('vue-connexion').style.display = 'none';
+  document.getElementById('vue-app').style.display = 'block';
+  document.getElementById('nom-joueur').textContent = `${joueur.prenom} ${joueur.nom}`;
+
+  if (joueur.estAdmin) {
+    const bloc = document.getElementById('bloc-admin-cible');
+    bloc.style.display = 'block';
+    const select = document.getElementById('select-cible-admin');
+    select.innerHTML = '<option value="">Moi-même</option>';
+    listeJoueursGlobale.forEach(j => {
+      if (j.idJoueur === joueur.idJoueur) return;
+      const opt = document.createElement('option');
+      opt.value = j.idJoueur;
+      opt.textContent = j.nomAffiche;
+      select.appendChild(opt);
+    });
+    select.addEventListener('change', () => {
+      idJoueurAffiche = select.value ? Number(select.value) : null;
+      chargerJournee(journeeCourante);
+    });
+  }
+
+  chargerJournee(journeeCourante);
 }
-#nom-joueur { font-size: 12px; color: var(--ink-dim); font-family: var(--font-mono); }
-.onglets { display: flex; gap: 6px; }
-.onglet {
-  border: none;
-  background: transparent;
-  padding: 6px 14px;
-  border-radius: 4px;
-  font-size: 12px;
-  color: var(--ink-dim);
-  cursor: pointer;
-  font-family: var(--font-display);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+
+function changerOnglet(vue) {
+  document.querySelectorAll('.onglet').forEach(b => b.classList.toggle('actif', b.dataset.vue === vue));
+  document.getElementById('ecran-pronos').style.display = vue === 'pronos' ? 'block' : 'none';
+  document.getElementById('ecran-classement').style.display = vue === 'classement' ? 'block' : 'none';
+  document.getElementById('ecran-reglement').style.display = vue === 'reglement' ? 'block' : 'none';
+  document.getElementById('ecran-final').style.display = vue === 'final' ? 'block' : 'none';
+  if (vue === 'classement') chargerClassement();
+  if (vue === 'final') chargerPronoFinal();
 }
-.onglet.actif { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
-.lien { border: none; background: none; color: var(--accent); font-size: 13px; cursor: pointer; padding: 0; font-family: var(--font-mono); }
-.lien-discret { color: var(--ink-dim); display: block; margin: 14px auto 0; text-align: center; }
 
-.ecran { max-width: 480px; margin: 0 auto; padding: 20px 16px 40px; }
-#bloc-admin-cible { margin-bottom: 12px; }
-#bloc-admin-cible label { margin: 0 0 4px; }
-#select-cible-admin { width: 100%; height: 38px; border-radius: 4px; border: 1px solid var(--border); padding: 0 10px; font-size: 13px; background: var(--surface-2); color: var(--ink); }
-.carte { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+// --- Ecran Pronos ---
 
-.entete-journee { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--border); }
-.entete-journee button { border: none; background: none; font-size: 20px; color: var(--ink-dim); cursor: pointer; padding: 4px 10px; }
-.titre-journee { text-align: center; }
-.titre-journee p { margin: 0; }
-#journee-numero { font-family: var(--font-display); letter-spacing: 0.05em; font-size: 18px; color: var(--accent); text-transform: uppercase; }
-.note { font-size: 11px; color: var(--ink-dim); font-family: var(--font-mono); }
-
-.ligne-match { padding: 18px 16px; border-bottom: 1px solid var(--border); }
-.ligne-match:last-child { border-bottom: none; }
-
-.entete-match { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 4px; }
-.equipe-nom { font-family: var(--font-display); font-size: 20px; letter-spacing: 0.02em; text-transform: uppercase; }
-.vs { font-family: var(--font-display); font-size: 13px; color: var(--ink-dim); letter-spacing: 0.02em; }
-.entete-match .statut-match { font-size: 16px; width: auto; margin-left: 4px; }
-
-.detail-match { font-size: 12px; color: var(--ink-dim); font-family: var(--font-mono); text-align: center; margin: 0 0 14px; letter-spacing: 0.02em; }
-
-.boutons-1n2 { display: flex; gap: 12px; justify-content: center; }
-.choix-1n2 { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 58px; }
-.choix-1n2 button {
-  width: 58px; height: 42px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--surface-2);
-  color: var(--ink);
-  font-family: var(--font-display);
-  font-size: 18px;
-  cursor: pointer;
+function allerJournee(n) {
+  if (n < 1 || n > TOTAL_JOURNEES) return;
+  chargerJournee(n);
 }
-.choix-1n2 button.choisi { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 800; }
-.choix-1n2 button:disabled { color: var(--ink-locked); }
-.choix-1n2 .cote { font-family: var(--font-mono); font-size: 18px; font-weight: 700; color: var(--accent); }
 
-.bloc-score-exact { display: flex; flex-direction: column; align-items: center; }
-.inputs-score { display: flex; align-items: center; gap: 8px; }
-.inputs-score input {
-  width: 36px; height: 42px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--surface-2);
-  color: var(--ink);
-  text-align: center;
-  font-family: var(--font-display);
-  font-size: 19px;
-  padding: 0;
+async function chargerJournee(n) {
+  journeeCourante = n;
+  document.getElementById('journee-numero').textContent = `Journée ${n}`;
+  document.getElementById('journee-prec').disabled = n <= 1;
+  document.getElementById('journee-suiv').disabled = n >= TOTAL_JOURNEES;
+
+  const reponse = await apiGet('pronosJournee', { token: getToken(), journee: n, idJoueurCible: idJoueurAffiche });
+  const conteneur = document.getElementById('liste-matchs');
+  conteneur.innerHTML = '';
+  if (!reponse.success) return;
+
+  reponse.matchs.forEach(m => conteneur.appendChild(construireLigneMatch(m)));
+  majCompteur(reponse.matchs);
 }
-.inputs-score input.no-spin::-webkit-outer-spin-button,
-.inputs-score input.no-spin::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-.inputs-score input.no-spin { -moz-appearance: textfield; }
-.tiret-score { font-size: 18px; color: var(--ink-dim); }
-.cotes-score-exact { display: flex; gap: 16px; margin-top: 12px; }
-.cotes-score-exact span { font-family: var(--font-mono); font-size: 18px; font-weight: 700; color: var(--accent); }
 
-.statut-match { font-size: 15px; width: 18px; text-align: center; flex-shrink: 0; }
-.statut-match.saved { color: var(--green); }
-.statut-match.locked { color: var(--ink-dim); }
-.statut-match.error { color: var(--red); }
-.statut-match.saving { color: var(--accent); }
-
-.pied-journee { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: var(--surface); border-top: 1px solid var(--border); font-size: 12px; color: var(--ink-dim); font-family: var(--font-mono); }
-
-.table-classement { width: 100%; border-collapse: collapse; font-size: 13px; }
-.table-classement th { text-align: center; padding: 10px 6px; font-size: 11px; color: var(--ink-dim); border-bottom: 1px solid var(--border); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.04em; }
-.table-classement td { text-align: center; padding: 10px 6px; border-bottom: 1px solid var(--border); font-family: var(--font-mono); }
-.table-classement .col-joueur { text-align: left; }
-.delta-hausse { color: var(--green); }
-.delta-baisse { color: var(--red); }
-.delta-stable { color: var(--ink-dim); }
-
-.sous-onglets { display: flex; gap: 6px; margin-bottom: 12px; }
-.sous-onglet {
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--ink-dim);
-  padding: 8px 14px;
-  border-radius: 4px;
-  font-family: var(--font-display);
-  font-size: 13px;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-  cursor: pointer;
+function majCompteur(matchs) {
+  const nb = matchs.filter(m => m.prono).length;
+  document.getElementById('compteur-pronos').textContent = `${nb} / ${matchs.length} pronostiqués`;
 }
-.sous-onglet.actif { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 
-.carte-final { padding: 20px; }
-.carte-final h2 { font-family: var(--font-display); font-size: 17px; letter-spacing: 0.02em; text-transform: uppercase; color: var(--accent); margin: 20px 0 8px; }
-.carte-final h2:first-child { margin-top: 0; }
-.carte-final select { margin-bottom: 4px; }
-.carte-reglement h2 { font-family: var(--font-display); font-size: 17px; letter-spacing: 0.02em; text-transform: uppercase; color: var(--accent); margin: 20px 0 8px; }
-.carte-reglement h2:first-child { margin-top: 0; }
-.carte-reglement p { font-size: 14px; color: var(--ink); line-height: 1.6; margin: 0 0 4px; }
-.table-reglement { width: 100%; border-collapse: collapse; margin-top: 8px; font-family: var(--font-mono); font-size: 13px; }
-.table-reglement td { padding: 8px 0; border-bottom: 1px solid var(--border); }
-.table-reglement td:last-child { text-align: right; color: var(--accent); font-weight: 700; }
+function formaterDateHeure_(dateStr, heureStr) {
+  const parts = String(dateStr).split('-');
+  if (parts.length === 3) return `${parts[2]}/${parts[1]} · ${heureStr}`;
+  return `${dateStr} · ${heureStr}`;
+}
+
+function construireLigneMatch(m) {
+  const ligne = document.createElement('div');
+  ligne.className = 'ligne-match';
+
+  const entete = document.createElement('div');
+  entete.className = 'entete-match';
+  const spanDom = document.createElement('span');
+  spanDom.className = 'equipe-nom';
+  spanDom.textContent = m.domicile;
+  const spanVs = document.createElement('span');
+  spanVs.className = 'vs';
+  spanVs.textContent = 'vs';
+  const spanExt = document.createElement('span');
+  spanExt.className = 'equipe-nom';
+  spanExt.textContent = m.exterieur;
+  entete.appendChild(spanDom);
+  entete.appendChild(spanVs);
+  entete.appendChild(spanExt);
+
+  const statutIcone = document.createElement('span');
+  statutIcone.className = 'statut-match';
+  statutIcone.textContent = m.verrouille ? '🔒' : (m.prono ? '✓' : '');
+  if (m.prono) statutIcone.classList.add('saved');
+  if (m.verrouille) statutIcone.classList.add('locked');
+  entete.appendChild(statutIcone);
+  ligne.appendChild(entete);
+
+  const detail = document.createElement('p');
+  detail.className = 'detail-match';
+  const prefixe = m.typePronostic === 'score_exact' ? 'SCORE EXACT · ' : '';
+  detail.textContent = prefixe + formaterDateHeure_(m.date, m.heure);
+  ligne.appendChild(detail);
+
+  if (m.typePronostic === 'score_exact') {
+    const bloc = document.createElement('div');
+    bloc.className = 'bloc-score-exact';
+
+    const inputs = document.createElement('div');
+    inputs.className = 'inputs-score';
+    const inD = document.createElement('input');
+    inD.type = 'number'; inD.className = 'no-spin'; inD.min = '0'; inD.max = '20'; inD.value = m.scoreDomicilePredit ?? '';
+    const inE = document.createElement('input');
+    inE.type = 'number'; inE.className = 'no-spin'; inE.min = '0'; inE.max = '20'; inE.value = m.scoreExterieurPredit ?? '';
+    inD.disabled = inE.disabled = m.verrouille;
+    const declencher = () => {
+      if (inD.value === '' || inE.value === '') return;
+      const sd = Number(inD.value), se = Number(inE.value);
+      const prono = sd > se ? '1' : (sd < se ? '2' : 'N');
+      envoyerProno(m.idMatch, prono, sd, se, statutIcone);
+    };
+    inD.addEventListener('change', declencher);
+    inE.addEventListener('change', declencher);
+    inputs.appendChild(inD);
+    const tiret = document.createElement('span'); tiret.className = 'tiret-score'; tiret.textContent = '-';
+    inputs.appendChild(tiret);
+    inputs.appendChild(inE);
+    bloc.appendChild(inputs);
+
+    const cotesLigne = document.createElement('div');
+    cotesLigne.className = 'cotes-score-exact';
+    [m.coteDomicile, m.coteNul, m.coteExterieur].forEach(c => {
+      const s = document.createElement('span');
+      s.textContent = c || '–';
+      cotesLigne.appendChild(s);
+    });
+    bloc.appendChild(cotesLigne);
+
+    ligne.appendChild(bloc);
+  } else {
+    const boutons = document.createElement('div');
+    boutons.className = 'boutons-1n2';
+    const cotes = { '1': m.coteDomicile, 'N': m.coteNul, '2': m.coteExterieur };
+    ['1', 'N', '2'].forEach(val => {
+      const colonne = document.createElement('div');
+      colonne.className = 'choix-1n2';
+      const btn = document.createElement('button');
+      btn.textContent = val;
+      if (String(m.prono) === val) btn.classList.add('choisi');
+      btn.disabled = m.verrouille;
+      btn.addEventListener('click', () => {
+        boutons.querySelectorAll('button').forEach(b => b.classList.remove('choisi'));
+        btn.classList.add('choisi');
+        envoyerProno(m.idMatch, val, '', '', statutIcone);
+      });
+      colonne.appendChild(btn);
+      const cote = document.createElement('span');
+      cote.className = 'cote';
+      cote.textContent = cotes[val] ? cotes[val] : '–';
+      colonne.appendChild(cote);
+      boutons.appendChild(colonne);
+    });
+    ligne.appendChild(boutons);
+  }
+
+  return ligne;
+}
+
+async function envoyerProno(idMatch, prono, scoreDomicilePredit, scoreExterieurPredit, iconeEl) {
+  iconeEl.textContent = '…';
+  iconeEl.className = 'statut-match saving';
+  const reponse = await apiPost('sauvegarderProno', {
+    idMatch, prono, scoreDomicilePredit, scoreExterieurPredit, idJoueurCible: idJoueurAffiche,
+  });
+  if (reponse.success) {
+    iconeEl.textContent = '✓';
+    iconeEl.className = 'statut-match saved';
+  } else if (reponse.reason === 'verrouille') {
+    iconeEl.textContent = '🔒';
+    iconeEl.className = 'statut-match locked';
+  } else {
+    iconeEl.textContent = '⚠';
+    iconeEl.className = 'statut-match error';
+  }
+}
+
+async function aleatoireJournee() {
+  await apiPost('pronoAleatoireJournee', { journee: journeeCourante });
+  chargerJournee(journeeCourante);
+}
+
+async function aleatoireSaison() {
+  if (!confirm('Ça va remplir tous les matchs pas encore verrouillés de toute la saison au hasard. Continuer ?')) return;
+  await apiPost('pronoAleatoireSaison', {});
+  chargerJournee(journeeCourante);
+}
+
+// --- Classement final de la saison (podium + relegation) ---
+
+let listeEquipesGlobale = [];
+
+async function chargerPronoFinal() {
+  if (!listeEquipesGlobale.length) {
+    const repEquipes = await apiGet('listeEquipes');
+    if (repEquipes.success) listeEquipesGlobale = repEquipes.equipes;
+  }
+
+  const ids = ['final-equipe-1', 'final-equipe-2', 'final-equipe-3', 'final-equipe-16', 'final-equipe-17', 'final-equipe-18'];
+  ids.forEach(id => {
+    const select = document.getElementById(id);
+    select.innerHTML = '<option value="">–</option>' + listeEquipesGlobale.map(e => `<option value="${e}">${e}</option>`).join('');
+  });
+
+  const reponse = await apiGet('pronoFinal', { token: getToken() });
+  if (!reponse.success) return;
+  const p = reponse.prono;
+
+  document.getElementById('final-equipe-1').value = p.equipe1 || '';
+  document.getElementById('final-equipe-2').value = p.equipe2 || '';
+  document.getElementById('final-equipe-3').value = p.equipe3 || '';
+  document.getElementById('final-equipe-16').value = p.equipe16 || '';
+  document.getElementById('final-equipe-17').value = p.equipe17 || '';
+  document.getElementById('final-equipe-18').value = p.equipe18 || '';
+
+  const verrou = document.getElementById('verrou-final');
+  const btn = document.getElementById('btn-sauvegarder-final');
+  verrou.style.display = p.verrouille ? 'block' : 'none';
+  btn.disabled = p.verrouille;
+  ids.forEach(id => { document.getElementById(id).disabled = p.verrouille; });
+}
+
+async function sauvegarderPronoFinal() {
+  const statut = document.getElementById('statut-final');
+  statut.textContent = 'Enregistrement...';
+
+  const equipes = {
+    equipe1: document.getElementById('final-equipe-1').value,
+    equipe2: document.getElementById('final-equipe-2').value,
+    equipe3: document.getElementById('final-equipe-3').value,
+    equipe16: document.getElementById('final-equipe-16').value,
+    equipe17: document.getElementById('final-equipe-17').value,
+    equipe18: document.getElementById('final-equipe-18').value,
+  };
+
+  const reponse = await apiPost('sauvegarderPronoFinal', { equipes });
+  if (reponse.success) {
+    statut.textContent = 'Enregistré ✓';
+  } else if (reponse.reason === 'verrouille') {
+    statut.textContent = 'Verrouillé, plus de modification possible.';
+    chargerPronoFinal();
+  } else {
+    statut.textContent = 'Erreur, réessaie.';
+  }
+}
+
+async function chargerClassement() {
+  const reponse = await apiGet('classement', { type: classementActif });
+  const entete = document.getElementById('entete-classement');
+  const corps = document.getElementById('corps-classement');
+  corps.innerHTML = '';
+  if (!reponse.success) return;
+
+  const avecDelta = classementActif === 'general';
+  const config = {
+    general: { champ: 'paye', libelle: '60€ payé' },
+    highroller: { champ: 'payeHR', libelle: '100€ payé' },
+    retour: { champ: null, libelle: null },
+  }[classementActif];
+
+  let entetes = ['<th>Rang</th>'];
+  if (avecDelta) entetes.unshift('<th></th>');
+  entetes.push('<th class="col-joueur">Joueur</th><th>Points</th>');
+  if (config.libelle) entetes.push(`<th>${config.libelle}</th>`);
+  entete.innerHTML = '<tr>' + entetes.join('') + '</tr>';
+
+  reponse.classement.forEach(c => {
+    const tr = document.createElement('tr');
+    let cellules = '';
+    if (avecDelta) {
+      const delta = c.delta === null ? '–' : (c.delta > 0 ? `▲${c.delta}` : (c.delta < 0 ? `▼${Math.abs(c.delta)}` : '–'));
+      const classeDelta = c.delta > 0 ? 'delta-hausse' : (c.delta < 0 ? 'delta-baisse' : 'delta-stable');
+      cellules += `<td class="${classeDelta}">${delta}</td>`;
+    }
+    cellules += `<td>${c.rang}</td><td class="col-joueur">${c.prenom} ${c.nom}</td><td>${c.points}</td>`;
+    if (config.champ) {
+      const paye = c[config.champ];
+      cellules += `<td>${paye ? '✅' : '❌'}</td>`;
+    }
+    tr.innerHTML = cellules;
+    corps.appendChild(tr);
+  });
+}
