@@ -9,6 +9,7 @@ let journeeCourante = 1;
 let joueurCourant = null;
 let idJoueurAffiche = null; // si un admin saisit pour un autre joueur
 let listeJoueursGlobale = [];
+let classementActif = 'general';
 
 // --- Stockage du token ---
 const getToken = () => localStorage.getItem('token_challenge_l1');
@@ -45,6 +46,12 @@ async function init() {
   document.getElementById('journee-suiv').addEventListener('click', () => allerJournee(journeeCourante + 1));
   document.getElementById('btn-aleatoire').addEventListener('click', aleatoireJournee);
   document.getElementById('btn-aleatoire-saison').addEventListener('click', aleatoireSaison);
+  document.querySelectorAll('.sous-onglet').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('.sous-onglet').forEach(x => x.classList.remove('actif'));
+    b.classList.add('actif');
+    classementActif = b.dataset.classement;
+    chargerClassement();
+  }));
 
   const token = getToken();
   if (token) {
@@ -127,6 +134,7 @@ function changerOnglet(vue) {
   document.querySelectorAll('.onglet').forEach(b => b.classList.toggle('actif', b.dataset.vue === vue));
   document.getElementById('ecran-pronos').style.display = vue === 'pronos' ? 'block' : 'none';
   document.getElementById('ecran-classement').style.display = vue === 'classement' ? 'block' : 'none';
+  document.getElementById('ecran-reglement').style.display = vue === 'reglement' ? 'block' : 'none';
   if (vue === 'classement') chargerClassement();
 }
 
@@ -292,21 +300,26 @@ async function aleatoireSaison() {
 // --- Ecran Classement ---
 
 async function chargerClassement() {
-  const reponse = await apiGet('classement');
+  const reponse = await apiGet('classement', { type: classementActif });
+  const entete = document.getElementById('entete-classement');
   const corps = document.getElementById('corps-classement');
   corps.innerHTML = '';
   if (!reponse.success) return;
 
+  const avecDelta = classementActif === 'general';
+  entete.innerHTML = avecDelta
+    ? '<tr><th></th><th>Rang</th><th>Joueur</th><th>Points</th></tr>'
+    : '<tr><th>Rang</th><th>Joueur</th><th>Points</th></tr>';
+
   reponse.classement.forEach(c => {
     const tr = document.createElement('tr');
-    const delta = c.delta === null ? '–' : (c.delta > 0 ? `▲${c.delta}` : (c.delta < 0 ? `▼${Math.abs(c.delta)}` : '–'));
-    const classeDelta = c.delta > 0 ? 'delta-hausse' : (c.delta < 0 ? 'delta-baisse' : 'delta-stable');
-    tr.innerHTML = `
-      <td class="${classeDelta}">${delta}</td>
-      <td>${c.rang}</td>
-      <td>${c.prenom} ${c.nom}</td>
-      <td>${c.points}</td>
-    `;
+    if (avecDelta) {
+      const delta = c.delta === null ? '–' : (c.delta > 0 ? `▲${c.delta}` : (c.delta < 0 ? `▼${Math.abs(c.delta)}` : '–'));
+      const classeDelta = c.delta > 0 ? 'delta-hausse' : (c.delta < 0 ? 'delta-baisse' : 'delta-stable');
+      tr.innerHTML = `<td class="${classeDelta}">${delta}</td><td>${c.rang}</td><td>${c.prenom} ${c.nom}</td><td>${c.points}</td>`;
+    } else {
+      tr.innerHTML = `<td>${c.rang}</td><td>${c.prenom} ${c.nom}</td><td>${c.points}</td>`;
+    }
     corps.appendChild(tr);
   });
 }
