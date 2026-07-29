@@ -32,6 +32,7 @@
     <div class="onglets">
       <button class="onglet actif" data-vue="pronos">Pronos</button>
       <button class="onglet" data-vue="classement">Classement</button>
+      <button class="onglet" data-vue="reglement">Règlement</button>
     </div>
     <button id="btn-deconnexion" class="lien">Déconnexion</button>
   </nav>
@@ -62,11 +63,47 @@
   </section>
 
   <section id="ecran-classement" class="ecran" style="display:none">
+    <div class="sous-onglets">
+      <button class="sous-onglet actif" data-classement="general">Général</button>
+      <button class="sous-onglet" data-classement="highroller">HighRoller</button>
+      <button class="sous-onglet" data-classement="retour">Retour</button>
+    </div>
     <div class="carte">
       <table class="table-classement">
-        <thead><tr><th></th><th>Rang</th><th>Joueur</th><th>Points</th></tr></thead>
+        <thead id="entete-classement"><tr><th></th><th>Rang</th><th>Joueur</th><th>Points</th></tr></thead>
         <tbody id="corps-classement"></tbody>
       </table>
+    </div>
+  </section>
+
+  <section id="ecran-reglement" class="ecran" style="display:none">
+    <div class="carte carte-reglement">
+      <h2>Participation</h2>
+      <p>60€ pour la saison, par personne. Sur cette somme, 10€ sont réservés pour la 2ème partie de saison.</p>
+
+      <h2>Gains</h2>
+      <p>Champion d'automne (1er au classement à la mi-saison) : 60€.</p>
+      <p>Classement final : environ 20% des joueurs sont ITM (récompensés selon leur rang).</p>
+
+      <h2>Système de points</h2>
+      <p>Une bonne réponse (1 / N / 2) rapporte les points équivalents à la cote du pronostic sur les 8 premiers matchs de chaque journée. Plus le pari était risqué, plus il rapporte.</p>
+
+      <h2>9ème match : score exact</h2>
+      <p>Le dernier match de chaque journée demande un score exact plutôt qu'un simple 1/N/2. Le résultat (1/N/2) qu'on en déduit compte normalement (cote du pronostic) dans le total. Si le score exact est trouvé, les points de ce match sont doublés.</p>
+
+      <h2>Bonus journée</h2>
+      <table class="table-reglement">
+        <tr><td>6/9 bonnes réponses</td><td>+2 points</td></tr>
+        <tr><td>7/9 bonnes réponses</td><td>+5 points</td></tr>
+        <tr><td>8/9 bonnes réponses</td><td>+10 points</td></tr>
+        <tr><td>9/9 bonnes réponses</td><td>+20 points</td></tr>
+      </table>
+
+      <h2>Verrouillage</h2>
+      <p>Chaque match se verrouille automatiquement à son coup d'envoi. Passé ce moment, plus aucune modification possible sur ce match, même si le prono n'a pas été saisi.</p>
+
+      <h2>En cas de litige</h2>
+      <p>Chaque tentative de sauvegarde (acceptée ou refusée) est enregistrée avec l'heure exacte du serveur. En cas de doute sur un prono, demande à Berni de vérifier.</p>
     </div>
   </section>
 </div>
