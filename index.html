@@ -33,6 +33,7 @@
       <button class="onglet actif" data-vue="pronos">Pronos</button>
       <button class="onglet" data-vue="classement">Classement</button>
       <button class="onglet" data-vue="reglement">Règlement</button>
+      <button class="onglet" data-vue="final">Classement final</button>
     </div>
     <button id="btn-deconnexion" class="lien">Déconnexion</button>
   </nav>
@@ -99,11 +100,39 @@
         <tr><td>9/9 bonnes réponses</td><td>+20 points</td></tr>
       </table>
 
+      <h2>Classement final de la saison</h2>
+      <p>En plus des journées, un pronostic à part sur le classement final : le podium (1er, 2ème, 3ème), le barragiste (16ème), et les deux relégués directs (17ème, 18ème). Une équipe bien placée dans le bon groupe rapporte sa cote en points, doublée si le rang exact est trouvé. Le 16ème ne compte que si le barragiste descend réellement en L2 après le barrage. Verrouillé au coup d'envoi de la journée 1, comme le reste.</p>
+
       <h2>Verrouillage</h2>
       <p>Chaque match se verrouille automatiquement à son coup d'envoi. Passé ce moment, plus aucune modification possible sur ce match, même si le prono n'a pas été saisi.</p>
 
       <h2>En cas de litige</h2>
       <p>Chaque tentative de sauvegarde (acceptée ou refusée) est enregistrée avec l'heure exacte du serveur. En cas de doute sur un prono, demande à Berni de vérifier.</p>
+    </div>
+  </section>
+
+  <section id="ecran-final" class="ecran" style="display:none">
+    <div class="carte carte-final">
+      <p id="verrou-final" class="note" style="display:none">Verrouillé depuis le coup d'envoi de la journée 1, plus de modification possible.</p>
+
+      <h2>Podium</h2>
+      <label>1er</label>
+      <select id="final-equipe-1"></select>
+      <label>2ème</label>
+      <select id="final-equipe-2"></select>
+      <label>3ème</label>
+      <select id="final-equipe-3"></select>
+
+      <h2>Relégation</h2>
+      <label>16ème (barragiste)</label>
+      <select id="final-equipe-16"></select>
+      <label>17ème</label>
+      <select id="final-equipe-17"></select>
+      <label>18ème</label>
+      <select id="final-equipe-18"></select>
+
+      <button id="btn-sauvegarder-final" class="btn-principal">Enregistrer</button>
+      <p id="statut-final" class="note" style="margin-top:10px"></p>
     </div>
   </section>
 </div>
