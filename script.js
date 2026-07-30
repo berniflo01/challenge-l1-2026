@@ -123,6 +123,7 @@ async function afficherApp(joueur) {
   document.getElementById('vue-app').style.display = 'block';
 
   if (joueur.estAdmin) {
+    document.getElementById('onglet-admin').style.display = 'inline-block';
     const bloc = document.getElementById('bloc-admin-cible');
     bloc.style.display = 'block';
     const select = document.getElementById('select-cible-admin');
@@ -150,7 +151,9 @@ function changerOnglet(vue) {
   document.getElementById('ecran-pronos').style.display = vue === 'pronos' ? 'block' : 'none';
   document.getElementById('ecran-classement').style.display = vue === 'classement' ? 'block' : 'none';
   document.getElementById('ecran-reglement').style.display = vue === 'reglement' ? 'block' : 'none';
+  document.getElementById('ecran-admin').style.display = vue === 'admin' ? 'block' : 'none';
   if (vue === 'classement') chargerClassement();
+  if (vue === 'admin') initEcranAdmin();
 }
 
 // --- Ecran Pronos ---
@@ -537,5 +540,86 @@ async function chargerClassement() {
     }
     tr.innerHTML = cellules;
     corps.appendChild(tr);
+  });
+}
+
+// --- Ecran Admin ---
+
+let adminInitialise = false;
+
+function initEcranAdmin() {
+  if (adminInitialise) return;
+  adminInitialise = true;
+
+  const selectCalcul = document.getElementById('admin-journee-calcul');
+  for (let n = 1; n <= TOTAL_JOURNEES; n++) {
+    const opt = document.createElement('option');
+    opt.value = n;
+    opt.textContent = `Journée ${n}`;
+    selectCalcul.appendChild(opt);
+  }
+
+  const selectReset = document.getElementById('admin-joueur-reset');
+  const selectHistorique = document.getElementById('admin-joueur-historique');
+  listeJoueursGlobale.forEach(j => {
+    const opt1 = document.createElement('option');
+    opt1.value = j.nomAffiche;
+    opt1.textContent = j.nomAffiche;
+    selectReset.appendChild(opt1);
+    const opt2 = document.createElement('option');
+    opt2.value = j.idJoueur;
+    opt2.textContent = j.nomAffiche;
+    selectHistorique.appendChild(opt2);
+  });
+
+  document.getElementById('btn-admin-calculer').addEventListener('click', async () => {
+    const statut = document.getElementById('statut-admin-calculer');
+    statut.textContent = 'Calcul en cours...';
+    const journee = Number(selectCalcul.value);
+    const reponse = await apiPost('calculerPointsJournee', { journee });
+    if (reponse.success) {
+      statut.textContent = `Terminé — ${reponse.pronosMisAJour} pronos mis à jour.`;
+    } else if (reponse.reason === 'journee_incomplete') {
+      statut.textContent = `Journée incomplète — ${reponse.matchsRestants} match(s) pas encore terminé(s).`;
+    } else {
+      statut.textContent = 'Erreur, réessaie.';
+    }
+  });
+
+  document.getElementById('btn-admin-reset').addEventListener('click', async () => {
+    const statut = document.getElementById('statut-admin-reset');
+    statut.textContent = 'Réinitialisation...';
+    const nomComplet = selectReset.value;
+    const reponse = await apiPost('reinitialiserMotDePasseAdmin', { nomComplet });
+    statut.textContent = reponse.success
+      ? `Mot de passe de ${nomComplet} réinitialisé — il pourra en recréer un à sa prochaine connexion.`
+      : 'Erreur, réessaie.';
+  });
+
+  document.getElementById('btn-admin-historique').addEventListener('click', async () => {
+    const conteneur = document.getElementById('resultat-historique');
+    conteneur.innerHTML = '<p class="note">Chargement...</p>';
+    const idJoueur = Number(selectHistorique.value);
+    const reponse = await apiGet('historiqueJoueur', { token: getToken(), idJoueur });
+    if (!reponse.success) {
+      conteneur.innerHTML = '<p class="note">Erreur ou accès refusé.</p>';
+      return;
+    }
+    if (!reponse.lignes.length) {
+      conteneur.innerHTML = '<p class="note">Aucune tentative enregistrée pour ce joueur.</p>';
+      return;
+    }
+    conteneur.innerHTML = '';
+    reponse.lignes.forEach(l => {
+      const ligne = document.createElement('div');
+      ligne.className = 'ligne-historique';
+      const date = new Date(l.horodatage);
+      ligne.innerHTML = `
+        <span class="hist-date">${date.toLocaleString('fr-FR')}</span>
+        <span class="hist-detail">Journée ${l.journee} · match #${l.idMatch} · tenté "${l.valeurTentee}"${l.valeurPrecedente ? ` (avant : "${l.valeurPrecedente}")` : ''}</span>
+        <span class="hist-statut hist-statut-${l.statut}">${l.statut}</span>
+      `;
+      conteneur.appendChild(ligne);
+    });
   });
 }
