@@ -32,6 +32,7 @@
       <button class="onglet actif" data-vue="pronos">Pronos</button>
       <button class="onglet" data-vue="classement">Classement</button>
       <button class="onglet" data-vue="reglement">Règlement</button>
+      <button class="onglet" data-vue="admin" id="onglet-admin" style="display:none">Admin</button>
     </div>
     <button id="btn-deconnexion" class="lien" title="Déconnexion" aria-label="Déconnexion">✕</button>
   </nav>
@@ -132,6 +133,29 @@
 
       <h2>En cas de litige</h2>
       <p>Chaque tentative de sauvegarde (acceptée ou refusée) est enregistrée avec l'heure exacte du serveur. En cas de doute sur un prono, demande à Berni de vérifier.</p>
+    </div>
+  </section>
+
+  <section id="ecran-admin" class="ecran" style="display:none">
+    <div class="carte carte-admin">
+      <h2>Calculer les points d'une journée</h2>
+      <select id="admin-journee-calcul"></select>
+      <button id="btn-admin-calculer" class="btn-principal">Calculer les points</button>
+      <p id="statut-admin-calculer" class="note" style="margin-top:8px"></p>
+    </div>
+
+    <div class="carte carte-admin">
+      <h2>Réinitialiser un mot de passe</h2>
+      <select id="admin-joueur-reset"></select>
+      <button id="btn-admin-reset" class="btn-principal">Réinitialiser</button>
+      <p id="statut-admin-reset" class="note" style="margin-top:8px"></p>
+    </div>
+
+    <div class="carte carte-admin">
+      <h2>Historique d'un joueur</h2>
+      <select id="admin-joueur-historique"></select>
+      <button id="btn-admin-historique" class="btn-principal">Charger l'historique</button>
+      <div id="resultat-historique"></div>
     </div>
   </section>
 </div>
