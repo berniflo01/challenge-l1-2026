@@ -10,6 +10,7 @@ let joueurCourant = null;
 let idJoueurAffiche = null; // si un admin saisit pour un autre joueur
 let listeJoueursGlobale = [];
 let classementActif = 'general';
+let modeProno = 'avenir';
 
 // --- Stockage du token ---
 const getToken = () => localStorage.getItem('token_challenge_l1');
@@ -42,8 +43,7 @@ async function init() {
   document.getElementById('btn-connexion').addEventListener('click', connexion);
   document.querySelectorAll('.onglet').forEach(b => b.addEventListener('click', () => changerOnglet(b.dataset.vue)));
   document.getElementById('btn-deconnexion').addEventListener('click', () => { clearToken(); location.reload(); });
-  document.getElementById('journee-prec').addEventListener('click', () => allerJournee(journeeCourante - 1));
-  document.getElementById('journee-suiv').addEventListener('click', () => allerJournee(journeeCourante + 1));
+  document.getElementById('select-journee').addEventListener('change', e => chargerJournee(Number(e.target.value)));
   document.getElementById('btn-aleatoire').addEventListener('click', aleatoireJournee);
   document.getElementById('btn-aleatoire-saison').addEventListener('click', aleatoireSaison);
   document.querySelectorAll('.sous-onglet').forEach(b => b.addEventListener('click', () => {
@@ -53,6 +53,14 @@ async function init() {
     chargerClassement();
   }));
   document.getElementById('btn-sauvegarder-final').addEventListener('click', sauvegarderPronoFinal);
+  document.querySelectorAll('.sous-onglet-pronos').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('.sous-onglet-pronos').forEach(x => x.classList.remove('actif'));
+    b.classList.add('actif');
+    modeProno = b.dataset.modePronos;
+    document.querySelector('.pied-journee').style.display = modeProno === 'avenir' ? 'flex' : 'none';
+    document.getElementById('btn-aleatoire-saison').style.display = modeProno === 'avenir' ? 'block' : 'none';
+    chargerJournee(journeeCourante);
+  }));
 
   const token = getToken();
   if (token) {
@@ -104,7 +112,7 @@ async function connexion() {
   afficherApp(infos.joueur);
 }
 
-function afficherApp(joueur) {
+async function afficherApp(joueur) {
   joueurCourant = joueur;
   document.getElementById('vue-connexion').style.display = 'none';
   document.getElementById('vue-app').style.display = 'block';
@@ -128,7 +136,9 @@ function afficherApp(joueur) {
     });
   }
 
-  chargerJournee(journeeCourante);
+  const reponseJournee = await apiGet('journeeActuelle');
+  const journeeDepart = reponseJournee.success ? reponseJournee.journee : 1;
+  chargerJournee(journeeDepart);
 }
 
 function changerOnglet(vue) {
@@ -143,24 +153,82 @@ function changerOnglet(vue) {
 
 // --- Ecran Pronos ---
 
-function allerJournee(n) {
-  if (n < 1 || n > TOTAL_JOURNEES) return;
-  chargerJournee(n);
+function peuplerSelectJournee_() {
+  const select = document.getElementById('select-journee');
+  if (select.options.length) return; // deja peuple
+  for (let n = 1; n <= TOTAL_JOURNEES; n++) {
+    const opt = document.createElement('option');
+    opt.value = n;
+    opt.textContent = `Journée ${n}`;
+    select.appendChild(opt);
+  }
 }
 
 async function chargerJournee(n) {
   journeeCourante = n;
-  document.getElementById('journee-numero').textContent = `Journée ${n}`;
-  document.getElementById('journee-prec').disabled = n <= 1;
-  document.getElementById('journee-suiv').disabled = n >= TOTAL_JOURNEES;
+  peuplerSelectJournee_();
+  document.getElementById('select-journee').value = n;
 
-  const reponse = await apiGet('pronosJournee', { token: getToken(), journee: n, idJoueurCible: idJoueurAffiche });
   const conteneur = document.getElementById('liste-matchs');
   conteneur.innerHTML = '';
-  if (!reponse.success) return;
 
+  if (modeProno === 'termine') {
+    const reponse = await apiGet('resultatsJournee', { token: getToken(), journee: n, idJoueurCible: idJoueurAffiche });
+    if (!reponse.success) return;
+    reponse.matchs.forEach(m => conteneur.appendChild(construireLigneResultat(m)));
+    return;
+  }
+
+  const reponse = await apiGet('pronosJournee', { token: getToken(), journee: n, idJoueurCible: idJoueurAffiche });
+  if (!reponse.success) return;
   reponse.matchs.forEach(m => conteneur.appendChild(construireLigneMatch(m)));
   majCompteur(reponse.matchs);
+}
+
+function construireLigneResultat(m) {
+  const ligne = document.createElement('div');
+  ligne.className = 'ligne-match';
+
+  const entete = document.createElement('div');
+  entete.className = 'entete-match';
+  const spanDom = document.createElement('span');
+  spanDom.className = 'equipe-nom';
+  spanDom.textContent = m.domicile;
+  const spanScore = document.createElement('span');
+  spanScore.className = 'score-reel';
+  spanScore.textContent = m.statut !== 'termine'
+    ? 'À venir'
+    : (m.typePronostic === 'score_exact'
+        ? (m.scoreDomicileReel !== '' && m.scoreDomicileReel !== undefined ? `${m.scoreDomicileReel} - ${m.scoreExterieurReel}` : m.resultat || '–')
+        : (m.resultat || '–'));
+  const spanExt = document.createElement('span');
+  spanExt.className = 'equipe-nom';
+  spanExt.textContent = m.exterieur;
+  entete.appendChild(spanDom);
+  entete.appendChild(spanScore);
+  entete.appendChild(spanExt);
+  ligne.appendChild(entete);
+
+  const detail = document.createElement('p');
+  detail.className = 'detail-match';
+  const tonProno = m.typePronostic === 'score_exact'
+    ? (m.scoreDomicilePredit !== '' ? `${m.scoreDomicilePredit} - ${m.scoreExterieurPredit}` : '–')
+    : (m.prono || '–');
+  detail.textContent = `Ton prono : ${tonProno}`;
+  ligne.appendChild(detail);
+
+  const pointsLigne = document.createElement('p');
+  pointsLigne.className = 'points-gagnes';
+  if (m.statut !== 'termine') {
+    pointsLigne.textContent = 'Match pas encore joué';
+    pointsLigne.classList.add('en-attente');
+  } else {
+    pointsLigne.textContent = `${m.points > 0 ? '+' : ''}${m.points} point${Math.abs(m.points) > 1 ? 's' : ''}`;
+    pointsLigne.classList.add(m.points > 0 ? 'gagne' : 'perdu');
+  }
+  ligne.appendChild(pointsLigne);
+
+  return ligne;
 }
 
 function majCompteur(matchs) {
