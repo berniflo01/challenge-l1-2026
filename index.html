@@ -43,14 +43,16 @@
       <label>Saisir pour</label>
       <select id="select-cible-admin"><option value="">Moi-même</option></select>
     </div>
+    <div class="sous-onglets">
+      <button class="sous-onglet-pronos actif" data-mode-pronos="avenir">À venir</button>
+      <button class="sous-onglet-pronos" data-mode-pronos="termine">Terminé</button>
+    </div>
     <div class="carte">
       <div class="entete-journee">
-        <button id="journee-prec" aria-label="Journée précédente">‹</button>
         <div class="titre-journee">
-          <p id="journee-numero">Journée 1</p>
+          <select id="select-journee"></select>
           <p class="note">Verrouillage à chaque coup d'envoi</p>
         </div>
-        <button id="journee-suiv" aria-label="Journée suivante">›</button>
       </div>
 
       <div id="liste-matchs"></div>
