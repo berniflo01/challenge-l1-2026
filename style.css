@@ -214,6 +214,19 @@ select, input[type=password] {
 .carte-final h2 { font-family: var(--font-display); font-size: 17px; letter-spacing: 0.02em; text-transform: uppercase; color: var(--accent); margin: 20px 0 8px; }
 .carte-final h2:first-child { margin-top: 0; }
 .carte-final select { margin-bottom: 4px; }
+
+.carte-admin { padding: 20px; margin-bottom: 14px; }
+.carte-admin h2 { font-family: var(--font-display); font-size: 16px; letter-spacing: 0.02em; text-transform: uppercase; color: var(--accent); margin: 0 0 10px; }
+.carte-admin select { width: 100%; height: 40px; border-radius: 4px; border: 1px solid var(--border); padding: 0 10px; font-size: 14px; background: var(--surface-2); color: var(--ink); margin-bottom: 10px; }
+
+.ligne-historique { padding: 10px 0; border-bottom: 0.5px solid var(--border); font-size: 12px; font-family: var(--font-mono); display: flex; flex-direction: column; gap: 3px; }
+.ligne-historique:last-child { border-bottom: none; }
+.hist-date { color: var(--ink-dim); }
+.hist-detail { color: var(--ink); }
+.hist-statut { font-weight: 700; text-transform: uppercase; font-size: 11px; }
+.hist-statut-accepte { color: var(--green); }
+.hist-statut-accepte_admin { color: var(--accent); }
+.hist-statut-refuse_verrouille { color: var(--red); }
 .carte-reglement h2 { font-family: var(--font-display); font-size: 17px; letter-spacing: 0.02em; text-transform: uppercase; color: var(--accent); margin: 20px 0 8px; }
 .carte-reglement h2:first-child { margin-top: 0; }
 .carte-reglement p { font-size: 14px; color: var(--ink); line-height: 1.6; margin: 0 0 4px; }
