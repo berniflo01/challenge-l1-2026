@@ -1,4 +1,3 @@
-```javascript
 // ============================================================
 // script.js — Challenge Ligue 1
 // ============================================================
@@ -176,8 +175,8 @@ async function peuplerSelectJournee_() {
     const toutesTerminees = statut.toutesTerminees;
     const auMoinsUneTerminee = statut.auMoinsUneTerminee;
 
-    if (modeProno === 'avenir' && toutesTerminees) return;
-    if (modeProno === 'termine' && !auMoinsUneTerminee) return;
+    if (modeProno === 'avenir' && toutesTerminees) return; // masquee : plus rien a pronostiquer
+    if (modeProno === 'termine' && !auMoinsUneTerminee) return; // masquee : rien a montrer encore
 
     const opt = document.createElement('option');
     opt.value = n;
@@ -695,4 +694,3 @@ function initEcranAdmin() {
     });
   });
 }
-```
