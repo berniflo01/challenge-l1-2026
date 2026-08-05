@@ -45,7 +45,7 @@ async function init() {
   document.getElementById('btn-deconnexion').addEventListener('click', () => { clearToken(); location.reload(); });
   document.getElementById('select-journee').addEventListener('change', e => chargerJournee(Number(e.target.value)));
   document.getElementById('btn-aleatoire').addEventListener('click', aleatoireJournee);
-  document.getElementById('btn-aleatoire-saison').addEventListener('click', aleatoireSaison);
+  document.getElementById('btn-supprimer-journee').addEventListener('click', supprimerJournee);
   document.querySelectorAll('.sous-onglet').forEach(b => b.addEventListener('click', () => {
     document.querySelectorAll('.sous-onglet').forEach(x => x.classList.remove('actif'));
     b.classList.add('actif');
@@ -124,6 +124,7 @@ async function afficherApp(joueur) {
 
   if (joueur.estAdmin) {
     document.getElementById('onglet-admin').style.display = 'inline-block';
+    document.getElementById('btn-supprimer-journee').style.display = 'inline-block';
     const bloc = document.getElementById('bloc-admin-cible');
     bloc.style.display = 'block';
     const select = document.getElementById('select-cible-admin');
@@ -168,19 +169,21 @@ async function peuplerSelectJournee_() {
   const valeurActuelle = select.value;
   select.innerHTML = '';
 
-  for (let n = 1; n <= TOTAL_JOURNEES; n++) {
-    const statut = statutJourneesGlobal.find(s => s.journee === n);
-    const toutesTerminees = statut ? statut.toutesTerminees : false;
-    const auMoinsUneTerminee = statut ? statut.auMoinsUneTerminee : false;
+  const journeesImportees = statutJourneesGlobal.map(s => s.journee).sort((a, b) => a - b);
 
-    if (modeProno === 'avenir' && toutesTerminees) continue; // masquee : plus rien a pronostiquer
-    if (modeProno === 'termine' && !auMoinsUneTerminee) continue; // masquee : rien a montrer encore
+  journeesImportees.forEach(n => {
+    const statut = statutJourneesGlobal.find(s => s.journee === n);
+    const toutesTerminees = statut.toutesTerminees;
+    const auMoinsUneTerminee = statut.auMoinsUneTerminee;
+
+    if (modeProno === 'avenir' && toutesTerminees) return; // masquee : plus rien a pronostiquer
+    if (modeProno === 'termine' && !auMoinsUneTerminee) return; // masquee : rien a montrer encore
 
     const opt = document.createElement('option');
     opt.value = n;
     opt.textContent = `Journée ${n}`;
     select.appendChild(opt);
-  }
+  });
 
   if ([...select.options].some(o => o.value == valeurActuelle)) select.value = valeurActuelle;
 }
@@ -258,7 +261,7 @@ function construireLigneResultat(m) {
     pointsLigne.textContent = 'Match pas encore joué';
     pointsLigne.classList.add('en-attente');
   } else {
-    pointsLigne.textContent = `${m.points > 0 ? '+' : ''}${m.points} point${Math.abs(m.points) > 1 ? 's' : ''}`;
+    pointsLigne.textContent = `${m.points > 0 ? '+' : ''}${formaterPoints_(m.points)} point${Math.abs(m.points) > 1 ? 's' : ''}`;
     pointsLigne.classList.add(m.points > 0 ? 'gagne' : 'perdu');
   }
   ligne.appendChild(pointsLigne);
@@ -344,7 +347,12 @@ function construireLigneMatch(m) {
       if (inD.value === '' || inE.value === '') return;
       const sd = Number(inD.value), se = Number(inE.value);
       const prono = sd > se ? '1' : (sd < se ? '2' : 'N');
-      envoyerProno(m.idMatch, prono, sd, se, statutIcone);
+      envoyerProno(m.idMatch, prono, sd, se, statutIcone).then(reponse => {
+        if (!reponse.success && reponse.reason === 'verrouille') {
+          inD.value = ''; inE.value = ''; inD.disabled = inE.disabled = true;
+          alert('Ce match vient de se verrouiller (coup d\'envoi atteint) — ton score n\'a pas été enregistré.');
+        }
+      });
     };
     inD.addEventListener('change', declencher);
     inE.addEventListener('change', declencher);
@@ -378,7 +386,14 @@ function construireLigneMatch(m) {
       btn.addEventListener('click', () => {
         boutons.querySelectorAll('button').forEach(b => b.classList.remove('choisi'));
         btn.classList.add('choisi');
-        envoyerProno(m.idMatch, val, '', '', statutIcone);
+        envoyerProno(m.idMatch, val, '', '', statutIcone).then(reponse => {
+          if (!reponse.success) {
+            btn.classList.remove('choisi');
+            if (reponse.reason === 'verrouille') {
+              alert('Ce match vient de se verrouiller (coup d\'envoi atteint) — ton choix n\'a pas été enregistré.');
+            }
+          }
+        });
       });
       colonne.appendChild(btn);
       const cote = document.createElement('span');
@@ -409,6 +424,7 @@ async function envoyerProno(idMatch, prono, scoreDomicilePredit, scoreExterieurP
     iconeEl.textContent = '⚠';
     iconeEl.className = 'statut-match error';
   }
+  return reponse;
 }
 
 async function aleatoireJournee() {
@@ -416,10 +432,10 @@ async function aleatoireJournee() {
   chargerJournee(journeeCourante);
 }
 
-async function aleatoireSaison() {
-  if (!confirm('Ça va remplir tous les matchs pas encore verrouillés de toute la saison au hasard. Continuer ?')) return;
-  await apiPost('pronoAleatoireSaison', { idJoueurCible: idJoueurAffiche });
-  chargerJournee(journeeCourante);
+async function supprimerJournee() {
+  if (!confirm(`Supprimer tous les pronos de tous les joueurs pour la journée ${journeeCourante} ? Irréversible.`)) return;
+  const reponse = await apiPost('supprimerJourneeAdmin', { journee: journeeCourante });
+  if (reponse.success) chargerJournee(journeeCourante);
 }
 
 // --- Classement final de la saison (podium + relegation) ---
@@ -505,6 +521,10 @@ function badgesJoueur_(nom, prenom) {
   return badges;
 }
 
+function formaterPoints_(n) {
+  return Number(n || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 async function chargerClassement() {
   const reponse = await apiGet('classement', { type: classementActif });
   const entete = document.getElementById('entete-classement');
@@ -533,7 +553,7 @@ async function chargerClassement() {
       const classeDelta = c.delta > 0 ? 'delta-hausse' : (c.delta < 0 ? 'delta-baisse' : 'delta-stable');
       cellules += `<td class="${classeDelta}">${delta}</td>`;
     }
-    cellules += `<td>${c.rang}</td><td class="col-joueur">${c.prenom} ${c.nom} ${badgesJoueur_(c.nom, c.prenom)}</td><td>${c.points}</td>`;
+    cellules += `<td>${c.rang}</td><td class="col-joueur">${c.prenom} ${c.nom} ${badgesJoueur_(c.nom, c.prenom)}</td><td>${formaterPoints_(c.points)}</td>`;
     if (config.champ) {
       const paye = c[config.champ];
       cellules += `<td>${paye ? '✅' : '❌'}</td>`;
