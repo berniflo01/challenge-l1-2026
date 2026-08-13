@@ -154,7 +154,7 @@ async function afficherApp(joueur) {
     const bloc = document.getElementById('bloc-admin-cible');
     bloc.style.display = 'block';
     const select = document.getElementById('select-cible-admin');
-    select.innerHTML = '<option value="">Moi-même</option>';
+    select.innerHTML = '';
     listeJoueursGlobale.forEach(j => {
       if (j.idJoueur === joueur.idJoueur) return;
       const opt = document.createElement('option');
@@ -162,6 +162,11 @@ async function afficherApp(joueur) {
       opt.textContent = j.nomAffiche;
       select.appendChild(opt);
     });
+    const optMoi = document.createElement('option');
+    optMoi.value = '';
+    optMoi.textContent = 'Moi-même';
+    select.appendChild(optMoi);
+    select.value = '';
     select.addEventListener('change', () => {
       idJoueurAffiche = select.value ? Number(select.value) : null;
       chargerJournee(journeeCourante);
@@ -361,15 +366,69 @@ function construireLigneResultat(m) {
   return ligne;
 }
 
+let pronostiquesActuels = new Set();
+
 function majCompteur(matchs) {
-  const nb = matchs.filter(m => m.prono).length;
-  document.getElementById('compteur-pronos').textContent = `${nb} / ${matchs.length} pronostiqués`;
+  pronostiquesActuels = new Set(matchs.filter(m => m.prono).map(m => m.idMatch));
+  majCompteurAffichage_(matchs.length);
+}
+
+function majCompteurAffichage_(total) {
+  document.getElementById('compteur-pronos').textContent = `${pronostiquesActuels.size} / ${total} pronostiqués`;
 }
 
 function formaterDateHeure_(dateStr, heureStr) {
   const parts = String(dateStr).split('-');
   if (parts.length === 3) return `${parts[2]}/${parts[1]} · ${heureStr}`;
   return `${dateStr} · ${heureStr}`;
+}
+
+function construireBoutonAutresPronos_(idMatch) {
+  const conteneur = document.createElement('div');
+  conteneur.className = 'autres-pronos';
+
+  const btn = document.createElement('button');
+  btn.className = 'btn-autres-pronos';
+  btn.textContent = 'Voir les pronos des autres ▾';
+
+  const liste = document.createElement('div');
+  liste.className = 'liste-autres-pronos';
+  liste.style.display = 'none';
+
+  let charge = false;
+  btn.addEventListener('click', async () => {
+    const ouvert = liste.style.display !== 'none';
+    if (ouvert) {
+      liste.style.display = 'none';
+      btn.textContent = 'Voir les pronos des autres ▾';
+      return;
+    }
+    btn.textContent = 'Masquer les pronos des autres ▴';
+    liste.style.display = 'block';
+    if (charge) return;
+    charge = true;
+
+    liste.innerHTML = '<p class="note">Chargement...</p>';
+    const reponse = await apiGet('pronosDesAutres', { token: getToken(), idMatch });
+    if (!reponse.success || !reponse.groupes.length) {
+      liste.innerHTML = '<p class="note">Personne n\'a encore pronostiqué ce match.</p>';
+      return;
+    }
+    liste.innerHTML = '';
+    reponse.groupes.forEach(g => {
+      const ligneGroupe = document.createElement('div');
+      ligneGroupe.className = 'groupe-autres-pronos';
+      ligneGroupe.innerHTML = `
+        <span class="choix-autres-pronos">${g.choix}</span>
+        <span class="joueurs-autres-pronos">${g.joueurs.join(', ')} (${g.total})</span>
+      `;
+      liste.appendChild(ligneGroupe);
+    });
+  });
+
+  conteneur.appendChild(btn);
+  conteneur.appendChild(liste);
+  return conteneur;
 }
 
 function construireLigneMatch(m) {
@@ -421,7 +480,10 @@ function construireLigneMatch(m) {
       const sd = Number(inD.value), se = Number(inE.value);
       const prono = sd > se ? '1' : (sd < se ? '2' : 'N');
       envoyerProno(m.idMatch, prono, sd, se, statutIcone).then(reponse => {
-        if (!reponse.success && reponse.reason === 'verrouille') {
+        if (reponse.success) {
+          pronostiquesActuels.add(m.idMatch);
+          majCompteurAffichage_(9);
+        } else if (reponse.reason === 'verrouille') {
           inD.value = ''; inE.value = ''; inD.disabled = inE.disabled = true;
           alert('Bien essayé, mais le coup d\'envoi vient d\'être donné.');
         }
@@ -460,7 +522,10 @@ function construireLigneMatch(m) {
         boutons.querySelectorAll('button').forEach(b => b.classList.remove('choisi'));
         btn.classList.add('choisi');
         envoyerProno(m.idMatch, val, '', '', statutIcone).then(reponse => {
-          if (!reponse.success) {
+          if (reponse.success) {
+            pronostiquesActuels.add(m.idMatch);
+            majCompteurAffichage_(9);
+          } else {
             btn.classList.remove('choisi');
             if (reponse.reason === 'verrouille') {
               alert('Bien essayé, mais le coup d\'envoi vient d\'être donné.');
@@ -476,6 +541,10 @@ function construireLigneMatch(m) {
       boutons.appendChild(colonne);
     });
     ligne.appendChild(boutons);
+  }
+
+  if (m.verrouille) {
+    ligne.appendChild(construireBoutonAutresPronos_(m.idMatch));
   }
 
   return ligne;
