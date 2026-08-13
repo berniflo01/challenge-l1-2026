@@ -9,6 +9,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Challenge L1">
+<link rel="manifest" href="manifest.json">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
@@ -45,10 +46,6 @@
   <img src="banniere.png" alt="Challenge Ligue 1 2026/2027" class="banniere">
 
   <section id="ecran-pronos" class="ecran">
-    <div id="bloc-admin-cible" style="display:none">
-      <label>Saisir pour</label>
-      <select id="select-cible-admin"><option value="">Moi-même</option></select>
-    </div>
     <div class="sous-onglets">
       <button class="sous-onglet-pronos actif" data-mode-pronos="matchs">Matchs</button>
       <button class="sous-onglet-pronos" data-mode-pronos="final">Prono Classement</button>
@@ -71,6 +68,11 @@
       </div>
 
       <div id="liste-matchs"></div>
+    </div>
+
+    <div id="bloc-admin-cible" style="display:none">
+      <label>Saisir pour</label>
+      <select id="select-cible-admin"><option value="">Moi-même</option></select>
     </div>
 
     <div id="carte-final" class="carte carte-final" style="display:none">
