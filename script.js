@@ -64,7 +64,11 @@ async function apiPost(action, body = {}) {
 document.addEventListener('DOMContentLoaded', init);
 
 async function init() {
-  await chargerListeJoueurs();
+  // Lance les 2 appels d'ouverture en parallele : ils ne dependent pas
+  // l'un de l'autre, les enchainer en serie doublait l'attente pour rien.
+  const token = getToken();
+  const promesseJoueurs = chargerListeJoueurs();
+  const promesseMoi = token ? apiGet('moi', { token }) : Promise.resolve(null);
 
   document.getElementById('btn-connexion').addEventListener('click', connexion);
   document.querySelectorAll('.onglet').forEach(b => b.addEventListener('click', () => changerOnglet(b.dataset.vue)));
@@ -92,15 +96,13 @@ async function init() {
   document.getElementById('btn-journee-precedente').addEventListener('click', () => chargerJournee(journeeCourante - 1));
   document.getElementById('btn-journee-suivante').addEventListener('click', () => chargerJournee(journeeCourante + 1));
 
-  const token = getToken();
-  if (token) {
-    const reponse = await apiGet('moi', { token });
-    if (reponse.success) {
-      afficherApp(reponse.joueur);
-      return;
-    }
-    clearToken();
+  const [, reponseMoi] = await Promise.all([promesseJoueurs, promesseMoi]);
+
+  if (reponseMoi && reponseMoi.success) {
+    afficherApp(reponseMoi.joueur);
+    return;
   }
+  if (token) clearToken();
   document.getElementById('vue-connexion').style.display = 'flex';
 }
 
@@ -171,7 +173,13 @@ async function afficherApp(joueur) {
     });
   }
 
-  const reponseJournee = await apiGet('journeeActuelle');
+  // Lance journeeActuelle et statutJournees en parallele : chargerJournee
+  // a besoin des 2, les enchainer en serie ajoutait un aller-retour complet.
+  const [reponseJournee, reponseStatuts] = await Promise.all([
+    apiGet('journeeActuelle'),
+    apiGet('statutJournees'),
+  ]);
+  if (reponseStatuts.success) statutJourneesGlobal = reponseStatuts.statuts;
   const journeeDepart = reponseJournee.success ? reponseJournee.journee : 1;
   chargerJournee(journeeDepart);
   chargerBandeauEnAttente();
