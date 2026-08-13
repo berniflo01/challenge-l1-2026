@@ -444,7 +444,19 @@ function construireLigneMatch(m) {
   spanDom.textContent = nomCourt_(m.domicile);
   const spanVs = document.createElement('span');
   spanVs.className = 'vs';
-  spanVs.textContent = 'vs';
+  if (m.statut === 'termine') {
+    spanVs.textContent = m.typePronostic === 'score_exact' && m.scoreDomicileReel !== ''
+      ? `${m.scoreDomicileReel} - ${m.scoreExterieurReel}`
+      : (m.resultat || 'vs');
+    spanVs.classList.add('score-fini');
+  } else if (m.statut === 'en_cours') {
+    spanVs.textContent = m.typePronostic === 'score_exact' && m.scoreDomicileReel !== ''
+      ? `${m.scoreDomicileReel} - ${m.scoreExterieurReel}`
+      : '● LIVE';
+    spanVs.classList.add('score-live');
+  } else {
+    spanVs.textContent = 'vs';
+  }
   const spanExt = document.createElement('span');
   spanExt.className = 'equipe-nom';
   spanExt.textContent = nomCourt_(m.exterieur);
@@ -543,6 +555,19 @@ function construireLigneMatch(m) {
       boutons.appendChild(colonne);
     });
     ligne.appendChild(boutons);
+  }
+
+  if (m.statut === 'termine') {
+    const pointsLigne = document.createElement('p');
+    pointsLigne.className = 'points-gagnes-live';
+    if (m.points > 0) {
+      pointsLigne.textContent = `✅ +${formaterPoints_(m.points)} points`;
+      pointsLigne.classList.add('gagne');
+    } else if (m.prono) {
+      pointsLigne.textContent = '❌ Raté';
+      pointsLigne.classList.add('perdu');
+    }
+    if (pointsLigne.textContent) ligne.appendChild(pointsLigne);
   }
 
   if (m.verrouille) {
@@ -806,30 +831,7 @@ function initEcranAdmin() {
   if (adminInitialise) return;
   adminInitialise = true;
 
-  const selectCalcul = document.getElementById('admin-journee-calcul');
-  for (let n = 1; n <= TOTAL_JOURNEES; n++) {
-    const opt = document.createElement('option');
-    opt.value = n;
-    opt.textContent = `Journée ${n}`;
-    selectCalcul.appendChild(opt);
-  }
-
   remplirSelectsAdminJoueurs_();
-
-  document.getElementById('btn-admin-calculer').addEventListener('click', async () => {
-    const statut = document.getElementById('statut-admin-calculer');
-    statut.textContent = 'Calcul en cours...';
-    const journee = Number(selectCalcul.value);
-    const reponse = await apiPost('calculerPointsJournee', { journee });
-    if (reponse.success) {
-      statutJourneesGlobal = null;
-      statut.textContent = `Terminé — ${reponse.pronosMisAJour} pronos mis à jour.`;
-    } else if (reponse.reason === 'journee_incomplete') {
-      statut.textContent = `Journée incomplète — ${reponse.matchsRestants} match(s) pas encore terminé(s).`;
-    } else {
-      statut.textContent = 'Erreur, réessaie.';
-    }
-  });
 
   document.getElementById('btn-admin-classement-final').addEventListener('click', async () => {
     const statut = document.getElementById('statut-admin-classement-final');
