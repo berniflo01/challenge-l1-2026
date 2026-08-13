@@ -71,7 +71,6 @@ async function init() {
   document.getElementById('btn-deconnexion').addEventListener('click', () => { clearToken(); location.reload(); });
   document.getElementById('select-journee').addEventListener('change', e => chargerJournee(Number(e.target.value)));
   document.getElementById('btn-aleatoire').addEventListener('click', aleatoireJournee);
-  document.getElementById('btn-supprimer-journee').addEventListener('click', supprimerJournee);
   document.querySelectorAll('.sous-onglet').forEach(b => b.addEventListener('click', () => {
     document.querySelectorAll('.sous-onglet').forEach(x => x.classList.remove('actif'));
     b.classList.add('actif');
@@ -150,7 +149,6 @@ async function afficherApp(joueur) {
 
   if (joueur.estAdmin) {
     document.getElementById('onglet-admin').style.display = 'inline-block';
-    document.getElementById('btn-supprimer-journee').style.display = 'inline-block';
     const bloc = document.getElementById('bloc-admin-cible');
     bloc.style.display = 'block';
     const select = document.getElementById('select-cible-admin');
@@ -601,14 +599,6 @@ async function aleatoireJournee() {
   chargerJournee(journeeCourante);
 }
 
-async function supprimerJournee() {
-  if (!confirm(`Supprimer tous les pronos de tous les joueurs pour la journée ${journeeCourante} ? Irréversible.`)) return;
-  const reponse = await apiPost('supprimerJourneeAdmin', { journee: journeeCourante });
-  if (reponse.success) {
-    statutJourneesGlobal = null;
-    chargerJournee(journeeCourante);
-  }
-}
 
 // --- Classement final de la saison (podium + relegation) ---
 
