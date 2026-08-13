@@ -64,7 +64,7 @@ async function apiPost(action, body = {}) {
 document.addEventListener('DOMContentLoaded', init);
 
 async function init() {
-  chargerListeJoueurs();
+  await chargerListeJoueurs();
 
   document.getElementById('btn-connexion').addEventListener('click', connexion);
   document.querySelectorAll('.onglet').forEach(b => b.addEventListener('click', () => changerOnglet(b.dataset.vue)));
