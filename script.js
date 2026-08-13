@@ -236,8 +236,10 @@ function changerOnglet(vue) {
 let statutJourneesGlobal = null;
 
 async function peuplerSelectJournee_() {
-  const rep = await apiGet('statutJournees');
-  statutJourneesGlobal = rep.success ? rep.statuts : [];
+  if (!statutJourneesGlobal) {
+    const rep = await apiGet('statutJournees');
+    statutJourneesGlobal = rep.success ? rep.statuts : [];
+  }
 
   const select = document.getElementById('select-journee');
   const valeurActuelle = select.value;
@@ -577,7 +579,10 @@ async function aleatoireJournee() {
 async function supprimerJournee() {
   if (!confirm(`Supprimer tous les pronos de tous les joueurs pour la journée ${journeeCourante} ? Irréversible.`)) return;
   const reponse = await apiPost('supprimerJourneeAdmin', { journee: journeeCourante });
-  if (reponse.success) chargerJournee(journeeCourante);
+  if (reponse.success) {
+    statutJourneesGlobal = null;
+    chargerJournee(journeeCourante);
+  }
 }
 
 // --- Classement final de la saison (podium + relegation) ---
@@ -817,6 +822,7 @@ function initEcranAdmin() {
     const journee = Number(selectCalcul.value);
     const reponse = await apiPost('calculerPointsJournee', { journee });
     if (reponse.success) {
+      statutJourneesGlobal = null;
       statut.textContent = `Terminé — ${reponse.pronosMisAJour} pronos mis à jour.`;
     } else if (reponse.reason === 'journee_incomplete') {
       statut.textContent = `Journée incomplète — ${reponse.matchsRestants} match(s) pas encore terminé(s).`;
