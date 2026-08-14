@@ -149,6 +149,15 @@
 
   <section id="ecran-admin" class="ecran" style="display:none">
     <div class="carte carte-admin">
+      <h2>Corriger les horaires d'une journée</h2>
+      <p class="note" style="margin-bottom:10px">Quand l'API laisse des horaires génériques (tous les matchs à la même heure). Verrouille les lignes et redésigne le match score exact automatiquement.</p>
+      <select id="admin-journee-horaires"></select>
+      <button id="btn-admin-charger-horaires" class="btn-principal">Charger les matchs</button>
+      <div id="admin-liste-horaires" style="margin-top:14px"></div>
+      <p id="statut-admin-horaires" class="note" style="margin-top:8px"></p>
+    </div>
+
+    <div class="carte carte-admin">
       <h2>Calculer le classement final (fin de saison)</h2>
       <p class="note" style="margin-bottom:10px">Nécessite ResultatFinal complet (positions 1 à 18) et la propriété BARRAGISTE_DESCEND à jour.</p>
       <button id="btn-admin-classement-final" class="btn-principal">Calculer</button>
