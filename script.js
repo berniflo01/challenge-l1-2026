@@ -831,6 +831,64 @@ function initEcranAdmin() {
 
   remplirSelectsAdminJoueurs_();
 
+  const selectHoraires = document.getElementById('admin-journee-horaires');
+  for (let n = 1; n <= TOTAL_JOURNEES; n++) {
+    const opt = document.createElement('option');
+    opt.value = n;
+    opt.textContent = `Journée ${n}`;
+    selectHoraires.appendChild(opt);
+  }
+  selectHoraires.value = journeeCourante;
+
+  document.getElementById('btn-admin-charger-horaires').addEventListener('click', async () => {
+    const conteneur = document.getElementById('admin-liste-horaires');
+    const statut = document.getElementById('statut-admin-horaires');
+    statut.textContent = '';
+    conteneur.innerHTML = '<p class="note">Chargement...</p>';
+
+    const journee = Number(selectHoraires.value);
+    const reponse = await apiGet('horairesJournee', { token: getToken(), journee });
+    if (!reponse.success || !reponse.matchs.length) {
+      conteneur.innerHTML = '<p class="note">Aucun match trouvé pour cette journée.</p>';
+      return;
+    }
+
+    conteneur.innerHTML = '';
+    reponse.matchs.forEach(m => {
+      const ligne = document.createElement('div');
+      ligne.className = 'ligne-horaire-admin';
+      ligne.innerHTML = `
+        <div class="horaire-match">${nomCourt_(m.domicile)} vs ${nomCourt_(m.exterieur)}${m.typePronostic === 'score_exact' ? ' <span class="tag-score-exact">SCORE EXACT</span>' : ''}</div>
+        <div class="horaire-champs">
+          <input type="date" data-id-match="${m.idMatch}" class="input-date-horaire" value="${m.date}">
+          <input type="time" data-id-match="${m.idMatch}" class="input-heure-horaire" value="${m.heure}">
+        </div>
+      `;
+      conteneur.appendChild(ligne);
+    });
+
+    const btnSauver = document.createElement('button');
+    btnSauver.className = 'btn-principal';
+    btnSauver.textContent = 'Enregistrer les horaires';
+    btnSauver.style.marginTop = '12px';
+    btnSauver.addEventListener('click', async () => {
+      statut.textContent = 'Enregistrement...';
+      const horaires = [...conteneur.querySelectorAll('.input-date-horaire')].map(inputDate => {
+        const idMatch = inputDate.dataset.idMatch;
+        const inputHeure = conteneur.querySelector(`.input-heure-horaire[data-id-match="${idMatch}"]`);
+        return { idMatch, date: inputDate.value, heure: inputHeure.value };
+      });
+      const rep = await apiPost('sauvegarderHorairesAdmin', { journee, horaires });
+      if (rep.success) {
+        statut.textContent = `${rep.corriges} match(s) corrigé(s). Score exact : ${rep.scoreExact}`;
+        statutJourneesGlobal = null;
+      } else {
+        statut.textContent = 'Erreur, réessaie.';
+      }
+    });
+    conteneur.appendChild(btnSauver);
+  });
+
   document.getElementById('btn-admin-classement-final').addEventListener('click', async () => {
     const statut = document.getElementById('statut-admin-classement-final');
     statut.textContent = 'Calcul en cours...';
